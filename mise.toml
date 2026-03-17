@@ -1,0 +1,130 @@
+[tasks.new]
+description = "Create a new survey topic (memo template)"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+topic="${1:?Usage: mise run new <topic-name>}"
+dir="topics/${topic}"
+today=$(date +%Y-%m-%d)
+
+if [ -d "$dir" ]; then
+  echo "Error: ${dir} already exists" >&2
+  exit 1
+fi
+
+mkdir -p "$dir"
+sed "s/YYYY-MM-DD/${today}/g" templates/memo.md > "${dir}/README.md"
+echo "Created ${dir}/README.md"
+"""
+
+[tasks.new-report]
+description = "Create a new survey topic (report template)"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+topic="${1:?Usage: mise run new-report <topic-name>}"
+dir="topics/${topic}"
+today=$(date +%Y-%m-%d)
+
+if [ -d "$dir" ]; then
+  echo "Error: ${dir} already exists" >&2
+  exit 1
+fi
+
+mkdir -p "$dir"
+sed "s/YYYY-MM-DD/${today}/g" templates/report.md > "${dir}/README.md"
+echo "Created ${dir}/README.md"
+"""
+
+[tasks.new-notebook]
+description = "Create a new Jupyter Notebook topic"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+topic="${1:?Usage: mise run new-notebook <topic-name>}"
+dir="topics/${topic}"
+today=$(date +%Y-%m-%d)
+
+if [ -d "$dir" ]; then
+  echo "Error: ${dir} already exists" >&2
+  exit 1
+fi
+
+mkdir -p "$dir"
+sd 'YYYY-MM-DD' "${today}" templates/notebook.ipynb > "${dir}/analysis.ipynb" 2>/dev/null \
+  || sed "s/YYYY-MM-DD/${today}/g" templates/notebook.ipynb > "${dir}/analysis.ipynb"
+echo "Created ${dir}/analysis.ipynb"
+"""
+
+[tasks.index]
+description = "Regenerate INDEX.md from topic frontmatter"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+{
+  echo "# Survey Index"
+  echo ""
+  echo "Auto-generated: $(date +%Y-%m-%d)"
+  echo ""
+  echo "| Title | Status | Tags | Created |"
+  echo "|-------|--------|------|---------|"
+
+  for readme in topics/*/README.md; do
+    [ -f "$readme" ] || continue
+    dir=$(dirname "$readme")
+    topic=$(basename "$dir")
+
+    title=$(sed -n 's/^title: *"\\(.*\\)"/\\1/p' "$readme" | head -1)
+    st=$(sed -n 's/^status: *\\(.*\\)/\\1/p' "$readme" | head -1)
+    tags=$(sed -n 's/^tags: *\\[\\(.*\\)\\]/\\1/p' "$readme" | head -1)
+    created=$(sed -n 's/^created: *\\(.*\\)/\\1/p' "$readme" | head -1)
+
+    [ -z "$title" ] && title="$topic"
+    [ -z "$st" ] && st="?"
+
+    echo "| [${title}](topics/${topic}/) | ${st} | ${tags} | ${created} |"
+  done | sort -t'|' -k5 -r
+} > INDEX.md
+
+echo "INDEX.md updated"
+"""
+
+[tasks.search]
+description = "Search topics by tag"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+tag="${1:?Usage: mise run search <tag>}"
+echo "Topics tagged with: ${tag}"
+echo "---"
+rg -l "tags:.*${tag}" topics/*/README.md 2>/dev/null | while read -r f; do
+  dir=$(dirname "$f")
+  topic=$(basename "$dir")
+  title=$(sed -n 's/^title: *"\\(.*\\)"/\\1/p' "$f" | head -1)
+  [ -z "$title" ] && title="$topic"
+  echo "- ${title} (topics/${topic}/)"
+done
+"""
+
+[tasks.list]
+description = "List all topics with status"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+for readme in topics/*/README.md; do
+  [ -f "$readme" ] || continue
+  dir=$(dirname "$readme")
+  topic=$(basename "$dir")
+  st=$(sed -n 's/^status: *\\(.*\\)/\\1/p' "$readme" | head -1)
+  title=$(sed -n 's/^title: *"\\(.*\\)"/\\1/p' "$readme" | head -1)
+  [ -z "$title" ] && title="$topic"
+  [ -z "$st" ] && st="?"
+  printf "%-15s %-50s %s\\n" "[$st]" "$title" "topics/$topic/"
+done | sort
+"""
