@@ -93,6 +93,85 @@ set -euo pipefail
 echo "INDEX.md updated"
 """
 
+[tasks.fm-dump]
+description = "Dump all topic frontmatter as JSON array"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+for readme in topics/*/README.md; do
+  [ -f "$readme" ] || continue
+  dir=$(dirname "$readme")
+  topic=$(basename "$dir")
+
+  frontmatter=$(awk '/^---$/{if(n++)exit}n' "$readme")
+
+  title=$(echo "$frontmatter" | sed -n 's/^title: *"\\(.*\\)"/\\1/p')
+  status=$(echo "$frontmatter" | sed -n 's/^status: *\\(.*\\)/\\1/p')
+  tags_raw=$(echo "$frontmatter" | sed -n 's/^tags: *\\[\\(.*\\)\\]/\\1/p')
+  related_raw=$(echo "$frontmatter" | sed -n 's/^related: *\\[\\(.*\\)\\]/\\1/p')
+  created=$(echo "$frontmatter" | sed -n 's/^created: *\\(.*\\)/\\1/p')
+
+  if [ -n "$tags_raw" ]; then
+    tags_json=$(echo "$tags_raw" | tr ',' '\\n' | sed 's/^ *//;s/ *$//' | jq -R . | jq -s .)
+  else
+    tags_json="[]"
+  fi
+
+  if [ -n "$related_raw" ]; then
+    related_json=$(echo "$related_raw" | tr ',' '\\n' | sed 's/^ *//;s/ *$//' | jq -R . | jq -s .)
+  else
+    related_json="[]"
+  fi
+
+  jq -n \\
+    --arg topic "$topic" \\
+    --arg title "${title:-$topic}" \\
+    --arg status "${status:-unknown}" \\
+    --argjson tags "$tags_json" \\
+    --argjson related "$related_json" \\
+    --arg created "${created:-}" \\
+    --arg path "topics/${topic}/" \\
+    '{topic: $topic, title: $title, status: $status, tags: $tags, related: $related, created: $created, path: $path}'
+done | jq -s .
+"""
+
+[tasks.fm-related]
+description = "Find topics related to the given topic by tag overlap"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+target="${1:?Usage: mise run fm-related <topic-name>}"
+
+dump=$(mise run fm-dump 2>/dev/null)
+
+target_tags=$(echo "$dump" | jq -e --arg t "$target" '.[] | select(.topic == $t) | .tags')
+if [ $? -ne 0 ]; then
+  echo "Error: topic '${target}' not found" >&2
+  exit 1
+fi
+
+echo "$dump" | jq -r --arg t "$target" --argjson ttags "$target_tags" '
+  .[] | select(.topic != $t) |
+  . as $item |
+  ($item.tags | map(select(. as $tag | $ttags | index($tag)))) as $shared |
+  select(($shared | length) > 0) |
+  "\\($shared | length)\\t\\($item.topic)\\t\\($shared | join(", "))"
+' | sort -t$'\\t' -k1 -rn | while IFS=$'\\t' read -r count topic shared; do
+  printf "%d\\t%-30s [%s]\\n" "$count" "$topic" "$shared"
+done
+"""
+
+[tasks.fm-tags]
+description = "List all unique tags with usage count"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+mise run fm-dump 2>/dev/null | jq -r '.[].tags[]' | sort | uniq -c | sort -rn
+"""
+
 [tasks.search]
 description = "Search topics by tag"
 run = """
