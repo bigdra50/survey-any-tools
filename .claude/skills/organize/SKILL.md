@@ -36,6 +36,19 @@ related は双方向（A→B を追加したら B→A も追加）。
 mise run index
 ```
 
-### 5. タグ正規化（任意）
+### 5. topics ↔ references の紐付け確認
+
+topics の `sources:` に記載された reference が `references/` に存在するか確認する。
+逆に、references/ にあるが どの topics からも参照されていない孤立ファイルがないか確認する。
+
+```bash
+# topics の sources フィールドから参照されている reference 名を抽出
+rg "^  - " topics/*/README.md | grep -v "^--"
+
+# references/ 内のファイル一覧
+ls references/
+```
+
+### 6. タグ正規化（任意）
 
 `mise run fm-tags` で表記ゆれや類似タグを確認し、統一を提案する。

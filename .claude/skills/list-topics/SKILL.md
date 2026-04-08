@@ -44,3 +44,15 @@ mise run fm-tags
 ```bash
 mise run fm-related <topic>
 ```
+
+## 外部資料一覧（references/）
+
+```bash
+ls references/
+```
+
+特定タグの references を探す:
+
+```bash
+rg "tags:.*<tag>" references/
+```

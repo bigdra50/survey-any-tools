@@ -25,6 +25,9 @@ mise run fm-dump
 該当する `topics/{topic}/README.md` を Read ツールで読み込む。
 複数トピックにまたがる質問は、関連する全トピックを読む。
 
+トピックの `sources:` フィールドに references が記載されている場合、
+必要に応じて `references/{name}.md` も読み込んで回答の根拠にする。
+
 ### 3. 回答
 
 - トピック内のソースを引用して回答する
