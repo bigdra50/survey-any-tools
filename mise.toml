@@ -127,20 +127,22 @@ for readme in topics/*/README.md; do
 
   title=$(echo "$frontmatter" | sed -n 's/^title: *"\\(.*\\)"/\\1/p')
   status=$(echo "$frontmatter" | sed -n 's/^status: *\\(.*\\)/\\1/p')
-  tags_raw=$(echo "$frontmatter" | sed -n 's/^tags: *\\[\\(.*\\)\\]/\\1/p')
-  related_raw=$(echo "$frontmatter" | sed -n 's/^related: *\\[\\(.*\\)\\]/\\1/p')
   created=$(echo "$frontmatter" | sed -n 's/^created: *\\(.*\\)/\\1/p')
 
+  # Parse tags: inline [a, b] or multi-line "  - a"
+  tags_raw=$(echo "$frontmatter" | sed -n 's/^tags: *\\[\\(.*\\)\\]/\\1/p')
   if [ -n "$tags_raw" ]; then
     tags_json=$(echo "$tags_raw" | tr ',' '\\n' | sed 's/^ *//;s/ *$//' | jq -R . | jq -s .)
   else
-    tags_json="[]"
+    tags_json=$(echo "$frontmatter" | awk '/^tags:/{found=1; next} found && /^  - /{gsub(/^  - /,""); print; next} found{found=0}' | jq -R . | jq -s .)
   fi
 
+  # Parse related: inline [a, b] or multi-line "  - a"
+  related_raw=$(echo "$frontmatter" | sed -n 's/^related: *\\[\\(.*\\)\\]/\\1/p')
   if [ -n "$related_raw" ]; then
     related_json=$(echo "$related_raw" | tr ',' '\\n' | sed 's/^ *//;s/ *$//' | jq -R . | jq -s .)
   else
-    related_json="[]"
+    related_json=$(echo "$frontmatter" | awk '/^related:/{found=1; next} found && /^  - /{gsub(/^  - /,""); print; next} found{found=0}' | jq -R . | jq -s .)
   fi
 
   jq -n \\
