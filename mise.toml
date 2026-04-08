@@ -93,6 +93,25 @@ set -euo pipefail
 echo "INDEX.md updated"
 """
 
+[tasks.new-reference]
+description = "Create a new reference entry (external resource)"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+name="${1:?Usage: mise run new-reference <name>}"
+file="references/${name}.md"
+today=$(date +%Y-%m-%d)
+
+if [ -f "$file" ]; then
+  echo "Error: ${file} already exists" >&2
+  exit 1
+fi
+
+sed "s/YYYY-MM-DD/${today}/g" templates/reference.md > "${file}"
+echo "Created ${file}"
+"""
+
 [tasks.fm-dump]
 description = "Dump all topic frontmatter as JSON array"
 run = """
