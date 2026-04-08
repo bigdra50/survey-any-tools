@@ -1,0 +1,10 @@
+{
+  "name": "survey-knowledge",
+  "version": "0.1.0",
+  "description": "survey-any リポジトリの調査知識をグローバルに検索・参照するプラグイン",
+  "author": {
+    "name": "bigdra50"
+  },
+  "repository": "https://github.com/bigdra50/survey-any",
+  "keywords": ["survey", "knowledge", "research", "reference"]
+}
