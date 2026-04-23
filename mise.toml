@@ -112,6 +112,25 @@ sed "s/YYYY-MM-DD/${today}/g" templates/reference.md > "${file}"
 echo "Created ${file}"
 """
 
+[tasks.new-paper-reference]
+description = "Create a new paper reference (Ochiai format)"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+name="${1:?Usage: mise run new-paper-reference <name>}"
+file="references/${name}.md"
+today=$(date +%Y-%m-%d)
+
+if [ -f "$file" ]; then
+  echo "Error: ${file} already exists" >&2
+  exit 1
+fi
+
+sed "s/YYYY-MM-DD/${today}/g" templates/paper-reference.md > "${file}"
+echo "Created ${file}"
+"""
+
 [tasks.fm-dump]
 description = "Dump all topic frontmatter as JSON array"
 run = """
