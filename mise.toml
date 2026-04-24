@@ -230,6 +230,23 @@ rg -l "tags:.*${tag}" topics/*/README.md 2>/dev/null | while read -r f; do
 done
 """
 
+[tasks.link-papers]
+description = "Link 'next papers' entries to existing references by arXiv ID / DOI"
+run = "python3 scripts/link-papers.py \"$@\""
+
+[tasks.deploy]
+description = "Build viewer and deploy to Cloudflare Pages"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd viewer
+bun install --frozen-lockfile
+bun run build
+cd ..
+npx wrangler pages deploy viewer/dist --project-name survey-any
+"""
+
 [tasks.list]
 description = "List all topics with status"
 run = """
