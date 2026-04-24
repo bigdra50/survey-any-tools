@@ -131,6 +131,34 @@ sed "s/YYYY-MM-DD/${today}/g" templates/paper-reference.md > "${file}"
 echo "Created ${file}"
 """
 
+[tasks.new-inbox]
+description = "Create a new inbox entry (external capture)"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+slug="${1:?Usage: mise run new-inbox <slug> [source_path]}"
+source_path="${2:-$PWD}"
+
+timestamp=$(date +%Y-%m-%d-%H%M%S)
+captured=$(date +%Y-%m-%dT%H:%M:%S%z)
+file="inbox/${timestamp}-${slug}.md"
+
+mkdir -p inbox
+
+if [ -f "$file" ]; then
+  echo "Error: ${file} already exists" >&2
+  exit 1
+fi
+
+esc_source=$(printf '%s' "$source_path" | sed 's/[\\/&]/\\\\&/g')
+sed -e "s/CAPTURED_AT/${captured}/" \\
+    -e "s/SOURCE_PATH/${esc_source}/" \\
+    templates/inbox.md > "${file}"
+
+echo "Created ${file}"
+"""
+
 [tasks.fm-dump]
 description = "Dump all topic frontmatter as JSON array"
 run = """
