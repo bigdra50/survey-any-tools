@@ -85,7 +85,8 @@ mise run new-paper-reference <name>
 
 frontmatter も埋める:
 - `read_depth`: `full`（本文読了）or `abstract`（アブストラクトのみ）
-- `semantic_scholar_id`, `arxiv_id`, `doi`: 取得できたものを記入
+- `arxiv_id`, `doi`: リンク解決の照合キーになるため、取得できたものは必ず記入する
+- `semantic_scholar_id`: 取得できたら記入
 - `citation_count`: Semantic Scholar から取得
 
 #### 4c. subagent の使い方
@@ -106,7 +107,7 @@ frontmatter も埋める:
 3. 落合フォーマットの6項目を埋める
 4. frontmatter のメタデータを埋める
 5. Semantic Scholar API で引用（references）と被引用（citations）の両方を取得し、
-   次に読むべき論文リストを作成する
+   次に読むべき論文リストを作成する（各エントリに arXiv ID があれば必ず含める）
    - references: この論文が参照している先行研究（過去方向）
    - citations: この論文を引用している後続研究（未来方向・最新事例への到達に必須）
    各論文の {title, arxiv_id, semantic_scholar_id, citationCount, openAccessPdf, year} を
@@ -152,7 +153,57 @@ while frontier is not empty:
 [進捗] 読了: {n}本 / 未探索: {m}本 / 今回の新規発見: {k}本
 ```
 
-### 6. サーベイマップ生成
+### 6. 論文間リンク解決
+
+飽和後、「次に読むべき論文は？」セクションのエントリを既存 reference にリンクする。
+
+#### 6a. 機械的リンク (arXiv ID / DOI 照合)
+
+```bash
+mise run link-papers
+```
+
+既存 reference の frontmatter から arXiv ID・DOI を収集し、「次に読むべき論文」中の ID と照合してリンクを挿入する。
+
+#### 6b. LLM によるリンク補完
+
+`mise run link-papers` 後に残った未リンクエントリ（`[→]` がない行）を処理する。
+
+1. 未リンクエントリを収集する:
+```bash
+rg -n '^\s*-' references/ | rg '次に読むべき' -A 100 # ではなく、以下のワンライナーで
+python3 -c "
+import re, pathlib
+for f in sorted(pathlib.Path('references').glob('*.md')):
+    text = f.read_text()
+    in_sec = False
+    for i, line in enumerate(text.splitlines(), 1):
+        if '次に読むべき論文' in line: in_sec = True; continue
+        if in_sec and line.startswith('#'): in_sec = False
+        if in_sec and line.strip().startswith('-') and '[→]' not in line:
+            print(f'{f.name}:{i}: {line.strip()[:120]}')
+"
+```
+
+2. 各未リンクエントリについて、タイトル・著者名のキーワードで references/ 内を検索:
+```bash
+rg -l "タイトルのキーワード" references/
+```
+
+3. 候補が見つかったら frontmatter の title・author を確認し、同一論文と判断できればリンクを追加する。
+   曖昧な場合はリンクしない（誤リンクより未リンクのほうがよい）。
+
+#### 6c. 飽和判定の検証
+
+`mise run link-papers` の末尾に「未調査だが複数回言及されている論文」レポートが出力される。
+2回以上言及されている未調査論文がある場合、飽和判定が甘かった可能性がある。
+
+対応方針:
+- 3回以上言及: サーベイ範囲内の重要論文である可能性が高い。ユーザーに追加調査を提案する。
+- 2回言及: 判断はユーザーに委ねる。数が多ければ上位のみ提案。
+- テーマと明らかに無関係な論文（基盤モデル等の汎用論文）は除外してよい。
+
+### 7. サーベイマップ生成
 
 すべての論文を読み終えたら、`topics/{topic}/README.md` に統合:
 
@@ -165,7 +216,7 @@ while frontier is not empty:
 mise run index
 ```
 
-### 7. 検索ソース詳細
+### 8. 検索ソース詳細
 
 | ソース | 用途 | アクセス方法 |
 |--------|------|-------------|
