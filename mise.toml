@@ -60,7 +60,7 @@ echo "Created ${dir}/analysis.ipynb"
 """
 
 [tasks.index]
-description = "Regenerate INDEX.md from topic frontmatter"
+description = "Regenerate INDEX.md from topic and course frontmatter"
 run = """
 #!/usr/bin/env bash
 set -euo pipefail
@@ -69,6 +69,8 @@ set -euo pipefail
   echo "# Survey Index"
   echo ""
   echo "Auto-generated: $(date +%Y-%m-%d)"
+  echo ""
+  echo "## Topics"
   echo ""
   echo "| Title | Status | Tags | Created |"
   echo "|-------|--------|------|---------|"
@@ -88,6 +90,32 @@ set -euo pipefail
 
     echo "| [${title}](topics/${topic}/) | ${st} | ${tags} | ${created} |"
   done | sort -t'|' -k5 -r
+
+  if [ -d courses ] && compgen -G "courses/*/README.md" > /dev/null; then
+    echo ""
+    echo "## Courses"
+    echo ""
+    echo "| Title | Status | Difficulty | Lessons | Tags |"
+    echo "|-------|--------|------------|---------|------|"
+
+    for readme in courses/*/README.md; do
+      [ -f "$readme" ] || continue
+      dir=$(dirname "$readme")
+      course=$(basename "$dir")
+
+      title=$(sed -n 's/^title: *"\\(.*\\)"/\\1/p' "$readme" | head -1)
+      st=$(sed -n 's/^status: *\\(.*\\)/\\1/p' "$readme" | head -1)
+      diff=$(sed -n 's/^difficulty: *\\(.*\\)/\\1/p' "$readme" | head -1)
+      tags=$(sed -n 's/^tags: *\\[\\(.*\\)\\]/\\1/p' "$readme" | head -1)
+      lesson_count=$(find "$dir" -maxdepth 1 -type f -name '[0-9][0-9]-*.md' | wc -l | tr -d ' ')
+
+      [ -z "$title" ] && title="$course"
+      [ -z "$st" ] && st="?"
+      [ -z "$diff" ] && diff="-"
+
+      echo "| [${title}](courses/${course}/) | ${st} | ${diff} | ${lesson_count} | ${tags} |"
+    done | sort -t'|' -k2
+  fi
 } > INDEX.md
 
 echo "INDEX.md updated"
@@ -128,6 +156,61 @@ if [ -f "$file" ]; then
 fi
 
 sed "s/YYYY-MM-DD/${today}/g" templates/paper-reference.md > "${file}"
+echo "Created ${file}"
+"""
+
+[tasks.new-course]
+description = "Create a new learning course (course template)"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+course="${1:?Usage: mise run new-course <course-name>}"
+dir="courses/${course}"
+today=$(date +%Y-%m-%d)
+
+if [ -d "$dir" ]; then
+  echo "Error: ${dir} already exists" >&2
+  exit 1
+fi
+
+mkdir -p "$dir"
+sed "s/YYYY-MM-DD/${today}/g" templates/course.md > "${dir}/README.md"
+echo "Created ${dir}/README.md"
+"""
+
+[tasks.new-lesson]
+description = "Create a new lesson inside a course (auto-numbered)"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+course="${1:?Usage: mise run new-lesson <course-name> <slug>}"
+slug="${2:?Usage: mise run new-lesson <course-name> <slug>}"
+dir="courses/${course}"
+
+if [ ! -d "$dir" ]; then
+  echo "Error: ${dir} does not exist. Run 'mise run new-course ${course}' first." >&2
+  exit 1
+fi
+
+# Next order: largest existing NN prefix + 1
+max=$(find "$dir" -maxdepth 1 -type f -name '[0-9][0-9]-*.md' -print 2>/dev/null \\
+  | sed 's|.*/||' | sed 's/^\\([0-9][0-9]\\)-.*/\\1/' | sort -n | tail -1)
+if [ -z "$max" ]; then
+  next=1
+else
+  next=$((10#$max + 1))
+fi
+order=$(printf '%02d' "$next")
+file="${dir}/${order}-${slug}.md"
+
+if [ -f "$file" ]; then
+  echo "Error: ${file} already exists" >&2
+  exit 1
+fi
+
+sed -e "s/^order: 0/order: ${next}/" templates/lesson.md > "$file"
 echo "Created ${file}"
 """
 
