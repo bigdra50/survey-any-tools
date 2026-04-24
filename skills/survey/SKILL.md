@@ -2,27 +2,42 @@
 name: survey
 description: |
   新規調査を実行するスキル。テーマを受け取り、既存トピックとの関連を判断した上で、
-  既存トピックへの追記または新規トピック作成を行う。
+  既存トピックへの追記または新規トピック作成を行い、survey-any リポジトリに記録する。
+  ghq でリポジトリパスを自動解決するため、どのプロジェクトで作業中でも呼び出せる。
   Use when: ユーザーが「〜について調べて」「〜を調査して」「〜をサーベイして」と依頼したとき、
   または research / survey / investigate といった調査系のリクエストがあったとき。
+  既存調査の参照は /ask、論文サーベイは /survey-paper、断片メモの捕獲は /survey-capture を使う。
+license: MIT
 ---
 
 # Survey
 
+新規の一般調査を実行し、survey-any に成果物を記録する。
+
+前提: `ghq`, `mise`, `jq` がインストール済みであること。
+
 ## Workflow
 
-### 1. 既存トピックの探索
+### 1. パス解決
 
 ```bash
-mise run fm-dump
+SURVEY_REPO=$(ghq list --full-path | grep 'survey-any$' | head -1)
+```
+
+以降のコマンドは `mise -C "$SURVEY_REPO"` または `cd "$SURVEY_REPO"` 後に実行する。
+
+### 2. 既存トピックの探索
+
+```bash
+mise -C "$SURVEY_REPO" run fm-dump
 ```
 
 出力JSONを確認し、依頼テーマと関連するトピックがあるか判断する。
 判断材料: tags の重複、タイトルの類似性、テーマの包含関係。
 
-必要に応じて `mise run fm-related <topic>` で特定トピックとの関連度を確認する。
+必要に応じて `mise -C "$SURVEY_REPO" run fm-related <topic>` で特定トピックとの関連度を確認する。
 
-### 2. 方針決定
+### 3. 方針決定
 
 | 状況 | 対応 |
 |------|------|
@@ -33,17 +48,17 @@ mise run fm-dump
 
 迷う場合は AskUserQuestion でユーザーに確認する。
 
-### 3. トピック作成
+### 4. トピック作成
 
 新規作成時のテンプレート選択:
 
 ```bash
-mise run new <topic-name>          # メモ（デフォルト）
-mise run new-report <topic-name>   # 構造的なレポート
-mise run new-notebook <topic-name> # データ可視化・コード実行記録が必要な場合
+mise -C "$SURVEY_REPO" run new <topic-name>          # メモ（デフォルト）
+mise -C "$SURVEY_REPO" run new-report <topic-name>   # 構造的なレポート
+mise -C "$SURVEY_REPO" run new-notebook <topic-name> # データ可視化・コード実行記録が必要な場合
 ```
 
-### 4. 調査実行
+### 5. 調査実行
 
 WebSearch / WebFetch で情報収集する。
 
@@ -55,7 +70,7 @@ WebSearch / WebFetch で情報収集する。
 | 自分の考察・複数情報の統合・所感 | `topics/{topic}/README.md` |
 
 外部資料が見つかった場合:
-1. `mise run new-reference <name>` で references/ にファイルを作成
+1. `mise -C "$SURVEY_REPO" run new-reference <name>` で references/ にファイルを作成
 2. frontmatter（title, type, author, organization, url, date, retrieved, tags）を記入
 3. 本文には客観的な内容記録のみ。自分の意見は含めない
 4. topics 側の README.md の `sources:` フィールドに reference 名を追加
@@ -66,8 +81,17 @@ topics/README.md への記述:
 - 外部資料の要約ではなく、自分の分析・統合・所感を書く
 - references に記録済みの資料は `sources:` で参照し、本文での重複記載を避ける
 
-### 5. 完了処理
+### 6. 完了処理
 
 ```bash
-mise run index
+mise -C "$SURVEY_REPO" run index
 ```
+
+### 7. 完了報告
+
+ユーザーに以下を伝える:
+- 作成・更新したトピックのパス（`$SURVEY_REPO/topics/...`）
+- 作成した references のリスト
+- 次のアクション候補（関連トピックの深掘り提案など）
+
+git commit は行わない（ユーザーが必要に応じて実施）。
