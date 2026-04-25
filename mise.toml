@@ -6,7 +6,7 @@ set -euo pipefail
 
 topic="${1:?Usage: mise run new <topic-name>}"
 dir="topics/${topic}"
-today=$(date +%Y-%m-%d)
+today=$(date +%Y-%m-%dT%H:%M:%S%z)
 
 if [ -d "$dir" ]; then
   echo "Error: ${dir} already exists" >&2
@@ -26,7 +26,7 @@ set -euo pipefail
 
 topic="${1:?Usage: mise run new-report <topic-name>}"
 dir="topics/${topic}"
-today=$(date +%Y-%m-%d)
+today=$(date +%Y-%m-%dT%H:%M:%S%z)
 
 if [ -d "$dir" ]; then
   echo "Error: ${dir} already exists" >&2
@@ -46,7 +46,7 @@ set -euo pipefail
 
 topic="${1:?Usage: mise run new-notebook <topic-name>}"
 dir="topics/${topic}"
-today=$(date +%Y-%m-%d)
+today=$(date +%Y-%m-%dT%H:%M:%S%z)
 
 if [ -d "$dir" ]; then
   echo "Error: ${dir} already exists" >&2
@@ -129,7 +129,7 @@ set -euo pipefail
 
 name="${1:?Usage: mise run new-reference <name>}"
 file="references/${name}.md"
-today=$(date +%Y-%m-%d)
+today=$(date +%Y-%m-%dT%H:%M:%S%z)
 
 if [ -f "$file" ]; then
   echo "Error: ${file} already exists" >&2
@@ -148,7 +148,7 @@ set -euo pipefail
 
 name="${1:?Usage: mise run new-paper-reference <name>}"
 file="references/${name}.md"
-today=$(date +%Y-%m-%d)
+today=$(date +%Y-%m-%dT%H:%M:%S%z)
 
 if [ -f "$file" ]; then
   echo "Error: ${file} already exists" >&2
@@ -167,7 +167,7 @@ set -euo pipefail
 
 course="${1:?Usage: mise run new-course <course-name>}"
 dir="courses/${course}"
-today=$(date +%Y-%m-%d)
+today=$(date +%Y-%m-%dT%H:%M:%S%z)
 
 if [ -d "$dir" ]; then
   echo "Error: ${dir} already exists" >&2
