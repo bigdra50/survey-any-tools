@@ -21,6 +21,7 @@ from pathlib import Path
 import sys as _sys
 _sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _tokenizer import tokenize  # noqa: E402
+from _frontmatter import parse_frontmatter, split_frontmatter  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 TOPICS = ROOT / "topics"
@@ -29,23 +30,14 @@ OUT = ROOT / "memory" / "bm25-index.json"
 
 
 
-def parse_frontmatter(text: str) -> tuple[dict, str]:
-    m = re.match(r"^---\n(.*?)\n---\n?(.*)", text, re.S)
-    if not m:
-        return {}, text
-    fm_text, body = m.group(1), m.group(2)
-    fm = {}
-    title = re.search(r'^title:\s*"(.*)"', fm_text, re.M)
-    if title:
-        fm["title"] = title.group(1)
-    return fm, body
 
 
 def collect_docs() -> list[dict]:
     docs: list[dict] = []
     for readme in sorted(TOPICS.glob("*/README.md")):
         text = readme.read_text(encoding="utf-8")
-        fm, body = parse_frontmatter(text)
+        fm = parse_frontmatter(text)
+        _, body = split_frontmatter(text)
         topic = readme.parent.name
         docs.append(
             {
@@ -58,7 +50,8 @@ def collect_docs() -> list[dict]:
         )
     for ref in sorted(REFS.glob("*.md")):
         text = ref.read_text(encoding="utf-8")
-        fm, body = parse_frontmatter(text)
+        fm = parse_frontmatter(text)
+        _, body = split_frontmatter(text)
         name = ref.stem
         docs.append(
             {

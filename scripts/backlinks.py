@@ -12,6 +12,10 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _frontmatter import parse_frontmatter, get_list  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 TOPICS = ROOT / "topics"
 REFS = ROOT / "references"
@@ -20,31 +24,6 @@ START = "<!-- backlinks:start -->"
 END = "<!-- backlinks:end -->"
 
 
-def parse_frontmatter(text: str) -> dict[str, object]:
-    m = re.match(r"^---\n(.*?)\n---", text, re.S)
-    if not m:
-        return {}
-    fm = m.group(1)
-    out: dict[str, object] = {}
-
-    title = re.search(r'^title:\s*"(.*)"', fm, re.M)
-    if title:
-        out["title"] = title.group(1)
-
-    # sources: list (multi-line "  - name" or inline "[a, b]")
-    sources: list[str] = []
-    inline = re.search(r"^sources:\s*\[(.*)\]\s*$", fm, re.M)
-    if inline:
-        sources = [s.strip().strip('"') for s in inline.group(1).split(",") if s.strip()]
-    else:
-        block = re.search(r"^sources:\s*\n((?:\s+-\s+.*\n)+)", fm, re.M)
-        if block:
-            for line in block.group(1).splitlines():
-                m2 = re.match(r"\s+-\s+(.*)", line)
-                if m2:
-                    sources.append(m2.group(1).strip().strip('"'))
-    out["sources"] = sources
-    return out
 
 
 def collect_backlinks(known_refs: set[str]) -> dict[str, list[tuple[str, str]]]:
@@ -61,7 +40,7 @@ def collect_backlinks(known_refs: set[str]) -> dict[str, list[tuple[str, str]]]:
         fm = parse_frontmatter(text)
         topic = readme.parent.name
         title = fm.get("title") or topic
-        for src in fm.get("sources", []):
+        for src in get_list(fm, "sources"):
             if src not in known_refs:
                 continue
             backlinks[src].append((topic, str(title)))
