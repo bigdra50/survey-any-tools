@@ -469,6 +469,10 @@ done
 description = "Link 'next papers' entries to existing references by arXiv ID / DOI"
 run = "python3 scripts/link-papers.py \"$@\""
 
+[tasks.backlinks]
+description = "Insert 'Cited by' sections into references based on topic sources: fields"
+run = "python3 scripts/backlinks.py \"$@\""
+
 [tasks.deploy]
 description = "Build viewer and deploy to Cloudflare Pages"
 run = """
