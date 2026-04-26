@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import re
 import shutil
+import subprocess
 import sys
 from datetime import date
 from pathlib import Path
@@ -100,6 +101,59 @@ def update_frontmatter(readme: Path, *, reason: str | None, successor: str | Non
     readme.write_text(new_text, encoding="utf-8")
 
 
+def append_replaces(successor_readme: Path, archived_topic: str) -> bool:
+    """Add `archived_topic` to the successor's frontmatter `replaces:` list.
+
+    Returns True if the file was modified. Uses line-level editing to keep the
+    rest of the frontmatter untouched. No-ops if the entry is already present.
+    """
+    text = successor_readme.read_text(encoding="utf-8")
+    m = re.match(r"^(---\n)(.*?)(\n---)", text, re.S)
+    if not m:
+        return False
+    head, body, tail = m.group(1), m.group(2), m.group(3)
+    body_lines = body.splitlines()
+
+    # Look for existing inline list `replaces: [a, b]`.
+    inline_idx = next(
+        (i for i, ln in enumerate(body_lines)
+         if re.match(r"^replaces:\s*\[.*\]\s*$", ln)),
+        None,
+    )
+    if inline_idx is not None:
+        line = body_lines[inline_idx]
+        m2 = re.match(r"^replaces:\s*\[(.*)\]\s*$", line)
+        items = [s.strip().strip('"') for s in m2.group(1).split(",") if s.strip()]
+        if archived_topic in items:
+            return False
+        items.append(archived_topic)
+        body_lines[inline_idx] = f"replaces: [{', '.join(items)}]"
+    else:
+        # Look for block list `replaces:\n  - a\n`.
+        block_idx = next(
+            (i for i, ln in enumerate(body_lines) if ln.rstrip() == "replaces:"),
+            None,
+        )
+        if block_idx is not None:
+            j = block_idx + 1
+            existing: list[str] = []
+            while j < len(body_lines) and re.match(r"^\s+-\s+", body_lines[j]):
+                m3 = re.match(r"^\s+-\s+(.*)", body_lines[j])
+                if m3:
+                    existing.append(m3.group(1).strip().strip('"'))
+                j += 1
+            if archived_topic in existing:
+                return False
+            body_lines.insert(j, f"  - {archived_topic}")
+        else:
+            # Append as new inline field at the end of frontmatter.
+            body_lines.append(f"replaces: [{archived_topic}]")
+
+    new_text = head + "\n".join(body_lines) + tail + text[m.end():]
+    successor_readme.write_text(new_text, encoding="utf-8")
+    return True
+
+
 def main() -> int:
     args = parse_args()
 
@@ -155,6 +209,27 @@ def main() -> int:
         print(f"updated frontmatter: {readme}")
     else:
         print(f"warn: no README.md at {readme}; frontmatter not updated", file=sys.stderr)
+
+    # Sync `replaces:` on the successor topic so the back-pointer survives
+    # alongside the archived `redirect:`.
+    if args.successor:
+        succ_readme = (topics_dir / args.successor / "README.md").resolve()
+        if succ_readme.is_file() and succ_readme.is_relative_to(topics_dir):
+            if append_replaces(succ_readme, args.topic):
+                print(f"updated replaces in {succ_readme}")
+
+    # Regenerate citation back-pointers so references no longer link to the
+    # archived path. backlinks.py only scans topics/, so any references that
+    # used to cite the archived topic will lose their stale link automatically.
+    backlinks_script = ROOT / "scripts" / "backlinks.py"
+    try:
+        subprocess.run(
+            [sys.executable, str(backlinks_script)],
+            check=True,
+            cwd=ROOT,
+        )
+    except (subprocess.CalledProcessError, OSError) as e:
+        print(f"warn: backlinks regeneration failed: {e}", file=sys.stderr)
 
     print()
     print(f"Archived. Run `mise run index` to refresh INDEX.md (it skips archive/).")
