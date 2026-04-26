@@ -24,27 +24,22 @@ REFS = ROOT / "references"
 OUT = ROOT / "memory" / "bm25-index.json"
 
 TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9_-]+|\d+")
-CJK_RANGE = re.compile(r"[぀-ヿ㐀-鿿豈-﫿]")
+CJK_RUN = re.compile(r"[む-ヿ㐀-鿿豈-﫿]+")
 STOPWORDS = {
     "the", "and", "for", "with", "from", "this", "that", "are", "was", "but",
-    "you", "your", "have", "has", "had", "not", "all", "any", "can", "use",
-    "use_for",
+    "you", "your", "have", "has", "had", "not", "all", "any", "can",
 }
 
 
 def tokenize(text: str) -> list[str]:
     text = text.lower()
     out: list[str] = []
-    # English / ASCII
     for m in TOKEN_RE.findall(text):
         if len(m) >= 2 and m not in STOPWORDS:
             out.append(m)
-    # CJK 2-grams
-    cjk_chars = CJK_RANGE.findall(text)
-    if len(cjk_chars) >= 2:
-        cjk_str = "".join(CJK_RANGE.findall(text))  # preserve order
-        for i in range(len(cjk_str) - 1):
-            out.append(cjk_str[i : i + 2])
+    for run in CJK_RUN.findall(text):
+        for i in range(len(run) - 1):
+            out.append(run[i : i + 2])
     return out
 
 
