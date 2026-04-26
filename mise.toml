@@ -485,6 +485,10 @@ run = "python3 scripts/tags-validate.py \"$@\""
 description = "Move a topic to archive/<YYYY>/<topic>/ (CREW closed stack). Usage: mise run archive <topic> [--reason X --successor topic]"
 run = "python3 scripts/archive.py \"$@\""
 
+[tasks.trace]
+description = "Append a berrypicking step to memory/seeking-trace.jsonl. Usage: mise run trace --query ... --hits a,b --picked a --next ... --strategy subject"
+run = "python3 scripts/log-trace.py \"$@\""
+
 [tasks.cited-by]
 description = "Show topics that cite the given reference (forward-chaining for berrypicking)"
 run = """
