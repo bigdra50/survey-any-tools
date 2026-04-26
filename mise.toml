@@ -477,6 +477,10 @@ run = "python3 scripts/backlinks.py \"$@\""
 description = "Suggest controlled-vocabulary merges for vocab/tags.yml from current tag usage"
 run = "python3 scripts/tags-suggest.py \"$@\""
 
+[tasks.tags-validate]
+description = "Validate frontmatter tags against vocab/tags.yml controlled vocabulary"
+run = "python3 scripts/tags-validate.py \"$@\""
+
 [tasks.deploy]
 description = "Build viewer and deploy to Cloudflare Pages"
 run = """
