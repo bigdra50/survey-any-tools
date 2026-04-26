@@ -32,6 +32,10 @@ REASONS = {
     "E": "Elsewhere",
 }
 
+# Conservative slug for topic / successor names. Matches CLAUDE.md naming rule
+# (no Japanese, no spaces, hyphens allowed).
+SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
+
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
@@ -48,10 +52,10 @@ def update_frontmatter(readme: Path, *, reason: str | None, successor: str | Non
     m = re.match(r"^(---\n)(.*?)(\n---)", text, re.S)
     if not m:
         print(f"warn: no frontmatter in {readme}; appending markers", file=sys.stderr)
-        head, body, tail = "---\n", "", "\n---"
-        text = head + body + tail + "\n" + text
+        text = "---\n\n---\n" + text
         m = re.match(r"^(---\n)(.*?)(\n---)", text, re.S)
-        assert m
+        if not m:
+            raise RuntimeError(f"failed to insert frontmatter markers into {readme}")
 
     head, body, tail = m.group(1), m.group(2), m.group(3)
     today = date.today().isoformat()
@@ -99,21 +103,37 @@ def update_frontmatter(readme: Path, *, reason: str | None, successor: str | Non
 def main() -> int:
     args = parse_args()
 
-    src = TOPICS / args.topic
-    if not src.is_dir():
+    if not SLUG_RE.match(args.topic):
+        print(f"error: invalid topic name: {args.topic!r}", file=sys.stderr)
+        return 2
+    if args.successor is not None and not SLUG_RE.match(args.successor):
+        print(f"error: invalid successor name: {args.successor!r}", file=sys.stderr)
+        return 2
+
+    topics_dir = TOPICS.resolve()
+    archive_root = ARCHIVE.resolve()
+
+    src = (topics_dir / args.topic).resolve()
+    if not src.is_relative_to(topics_dir) or not src.is_dir():
         print(f"error: topic '{args.topic}' not found at {src}", file=sys.stderr)
         return 1
 
-    dest_year = ARCHIVE / str(args.year)
-    dest = dest_year / args.topic
+    dest_year = archive_root / str(args.year)
+    dest = (dest_year / args.topic).resolve()
+    if not dest.is_relative_to(archive_root):
+        print(f"error: archive destination escapes archive/: {dest}", file=sys.stderr)
+        return 2
     if dest.exists():
         print(f"error: archive destination already exists: {dest}", file=sys.stderr)
         return 1
 
     if args.successor:
-        succ = TOPICS / args.successor
-        if not succ.is_dir():
-            print(f"warn: successor topic '{args.successor}' does not exist (yet)", file=sys.stderr)
+        succ = (topics_dir / args.successor).resolve()
+        if not succ.is_relative_to(topics_dir) or not succ.is_dir():
+            print(
+                f"warn: successor topic '{args.successor}' does not exist (yet)",
+                file=sys.stderr,
+            )
 
     print(f"src:  {src}")
     print(f"dest: {dest}")
