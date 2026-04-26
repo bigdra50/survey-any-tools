@@ -481,6 +481,10 @@ run = "python3 scripts/tags-suggest.py \"$@\""
 description = "Validate frontmatter tags against vocab/tags.yml controlled vocabulary"
 run = "python3 scripts/tags-validate.py \"$@\""
 
+[tasks.archive]
+description = "Move a topic to archive/<YYYY>/<topic>/ (CREW closed stack). Usage: mise run archive <topic> [--reason X --successor topic]"
+run = "python3 scripts/archive.py \"$@\""
+
 [tasks.deploy]
 description = "Build viewer and deploy to Cloudflare Pages"
 run = """
