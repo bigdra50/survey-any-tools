@@ -5,6 +5,9 @@ tags: []
 related: []
 created: YYYY-MM-DD
 sources: []
+# scent:                 # optional: IFT cues
+#   one_line: ""
+#   key_terms: []
 ---
 
 # {title}
