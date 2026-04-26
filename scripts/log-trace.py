@@ -35,8 +35,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--next", dest="next_query", default="", help="進化させた次のクエリ")
     p.add_argument(
         "--strategy",
+        choices=sorted(STRATEGIES),
         default="subject",
-        help=f"Bates の戦略 ({', '.join(sorted(STRATEGIES))})",
+        help="Bates の戦略",
     )
     p.add_argument("--session", default=os.environ.get("CLAUDE_SESSION_ID", ""), help="セッション識別子")
     return p.parse_args()
@@ -44,9 +45,6 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-
-    if args.strategy not in STRATEGIES:
-        print(f"warn: unknown strategy '{args.strategy}'", file=sys.stderr)
 
     record = {
         "timestamp": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),
