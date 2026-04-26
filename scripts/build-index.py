@@ -18,29 +18,15 @@ import re
 import sys
 from pathlib import Path
 
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _tokenizer import tokenize  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 TOPICS = ROOT / "topics"
 REFS = ROOT / "references"
 OUT = ROOT / "memory" / "bm25-index.json"
 
-TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9_-]+|\d+")
-CJK_RUN = re.compile(r"[む-ヿ㐀-鿿豈-﫿]+")
-STOPWORDS = {
-    "the", "and", "for", "with", "from", "this", "that", "are", "was", "but",
-    "you", "your", "have", "has", "had", "not", "all", "any", "can",
-}
-
-
-def tokenize(text: str) -> list[str]:
-    text = text.lower()
-    out: list[str] = []
-    for m in TOKEN_RE.findall(text):
-        if len(m) >= 2 and m not in STOPWORDS:
-            out.append(m)
-    for run in CJK_RUN.findall(text):
-        for i in range(len(run) - 1):
-            out.append(run[i : i + 2])
-    return out
 
 
 def parse_frontmatter(text: str) -> tuple[dict, str]:

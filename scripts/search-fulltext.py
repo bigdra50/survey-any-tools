@@ -16,30 +16,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 INDEX_PATH = ROOT / "memory" / "bm25-index.json"
 
-# Same tokenizer as build-index.py — keep in sync.
-TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9_-]+|\d+")
-# Match runs of CJK characters; non-CJK acts as a token boundary so we don't
-# emit cross-phrase bigrams like "館情" from "図書館 と 情報学".
-CJK_RUN = re.compile(r"[぀-ヿ㐀-鿿豈-﫿]+")
-STOPWORDS = {
-    "the", "and", "for", "with", "from", "this", "that", "are", "was", "but",
-    "you", "your", "have", "has", "had", "not", "all", "any", "can",
-}
+import sys as _sys
+_sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _tokenizer import tokenize, BM25_K1 as K1, BM25_B as B  # noqa: E402
 
-K1 = 1.5
-B = 0.75
-
-
-def tokenize(text: str) -> list[str]:
-    text = text.lower()
-    out: list[str] = []
-    for m in TOKEN_RE.findall(text):
-        if len(m) >= 2 and m not in STOPWORDS:
-            out.append(m)
-    for run in CJK_RUN.findall(text):
-        for i in range(len(run) - 1):
-            out.append(run[i : i + 2])
-    return out
 
 
 def score(query_terms: list[str], doc: dict, idf: dict, avgdl: float) -> float:
