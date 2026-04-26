@@ -489,6 +489,14 @@ run = "python3 scripts/archive.py \"$@\""
 description = "Append a berrypicking step to memory/seeking-trace.jsonl. Usage: mise run trace --query ... --hits a,b --picked a --next ... --strategy subject"
 run = "python3 scripts/log-trace.py \"$@\""
 
+[tasks.build-index]
+description = "Build BM25 full-text index over topics + references into memory/bm25-index.json"
+run = "python3 scripts/build-index.py"
+
+[tasks.search-fulltext]
+description = "BM25 ranked full-text search. Usage: mise run search-fulltext \"query\" [--top N] [--kind topic|reference]"
+run = "python3 scripts/search-fulltext.py \"$@\""
+
 [tasks.cited-by]
 description = "Show topics that cite the given reference (forward-chaining for berrypicking)"
 run = """

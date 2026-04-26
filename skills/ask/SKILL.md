@@ -47,6 +47,8 @@ SURVEY_REPO=$(ghq list --full-path | grep 'survey-any$' | head -1)
 
 ### 2. 初期検索 (Subject search)
 
+タグベースのマッチング:
+
 ```bash
 mise -C "$SURVEY_REPO" run fm-dump
 ```
@@ -61,6 +63,16 @@ mise -C "$SURVEY_REPO" run fm-dump | jq '.[] | select(.title | test("keyword"; "
 ```
 
 タグ統制を考慮するなら `vocab/tags.yml` で preferred 形を確認するとヒット率が上がる。
+
+BM25 全文検索 (タイトル + 本文。英語と日本語の両方をサポート):
+
+```bash
+mise -C "$SURVEY_REPO" run build-index           # 初回 / topic 追加後に再構築
+mise -C "$SURVEY_REPO" run search-fulltext "berrypicking 個人ナレッジ" --top 10
+mise -C "$SURVEY_REPO" run search-fulltext "..." --kind topic    # topic のみ
+```
+
+タグでヒットしないテーマでも本文の語彙でヒットするので、subject search が空振ったら fulltext を試す。
 
 ### 3. 補助コマンド (戦略別)
 
