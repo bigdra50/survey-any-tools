@@ -83,17 +83,44 @@ def main() -> int:
     merge_candidates = [grp for grp in groups.values() if len(grp) > 1]
 
     # 2. Levenshtein-based fuzzy clusters (length >= 4).
-    longish = [t for t, n in counter.items() if len(t) >= 4]
+    #
+    # O(N^2) is wasteful when N grows past a few hundred tags. Cut down candidate
+    # pairs by:
+    #   - dropping single-occurrence tags (typos, proper nouns rarely worth merging)
+    #   - bucketing by (length, first 2 chars) — Levenshtein <= 2 forces both to
+    #     match within ±1 length and at most 1 differing prefix char, so we only
+    #     need to compare each tag against its own bucket and adjacent buckets.
+    longish = [t for t, n in counter.items() if len(t) >= 4 and n >= 2]
+    buckets: dict[tuple[int, str], list[str]] = defaultdict(list)
+    for t in longish:
+        buckets[(len(t), t[:2])].append(t)
+
     seen: set[str] = set()
     fuzzy_groups: list[list[str]] = []
-    for i, a in enumerate(longish):
-        if a in seen:
+    for t in longish:
+        if t in seen:
             continue
-        cluster = [a]
-        for b in longish[i + 1 :]:
-            if b in seen:
+        cluster = [t]
+        # Compare against same-length / ±1 / ±2 buckets, scanning all
+        # 2-char prefixes that share at least one character with t[:2].
+        # In practice prefix mismatch by >=2 chars implies LD >= 2 already.
+        candidates: list[str] = []
+        for dl in (-2, -1, 0, 1, 2):
+            target_len = len(t) + dl
+            if target_len < 4:
                 continue
-            if abs(len(a) - len(b)) <= 2 and levenshtein(a, b) <= 2:
+            for prefix, bucket in buckets.items():
+                if prefix[0] != target_len:
+                    continue
+                # Allow up to 1 differing prefix char.
+                p = prefix[1]
+                diff = (p[0] != t[0]) + (p[1] != t[1])
+                if diff <= 1:
+                    candidates.extend(bucket)
+        for b in candidates:
+            if b == t or b in seen:
+                continue
+            if abs(len(t) - len(b)) <= 2 and levenshtein(t, b) <= 2:
                 cluster.append(b)
         if len(cluster) > 1:
             for c in cluster:
