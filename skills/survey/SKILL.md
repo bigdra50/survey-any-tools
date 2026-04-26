@@ -87,6 +87,19 @@ topics/README.md への記述:
 mise -C "$SURVEY_REPO" run index
 ```
 
+berrypicking trace を 1 行記録する (新規調査の発端を残すため):
+
+```bash
+mise -C "$SURVEY_REPO" run trace \\
+  --query "<ユーザーが投げた調査テーマ>" \\
+  --hits "<検索で参照した既存トピック群 (comma)>" \\
+  --picked "<新規作成 or 追記したトピック>" \\
+  --strategy subject
+```
+
+`memory/seeking-trace.jsonl` への 1 行追記。`.gitignore` 対象 (個人ローカル)。
+将来の retrieval reward / 自動 related 候補生成のシードになる。
+
 ### 7. 完了報告
 
 ユーザーに以下を伝える:

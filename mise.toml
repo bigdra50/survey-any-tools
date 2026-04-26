@@ -323,6 +323,10 @@ set -euo pipefail
 mise run fm-dump 2>/dev/null | jq -r '.[].tags[]' | sort | uniq -c | sort -rn
 """
 
+[tasks.review-due]
+description = "List topics due for CREW/MUSTIE-style review (stale memo / in-progress / explicit review_at)"
+run = "python3 scripts/review-due.py \"$@\""
+
 [tasks.search]
 description = "Search topics by tag"
 run = """
@@ -345,6 +349,92 @@ done
 description = "Link 'next papers' entries to existing references by arXiv ID / DOI"
 run = "python3 scripts/link-papers.py \"$@\""
 
+[tasks.backlinks]
+description = "Insert 'Cited by' sections into references based on topic sources: fields"
+run = "python3 scripts/backlinks.py \"$@\""
+
+[tasks.tags-suggest]
+description = "Suggest controlled-vocabulary merges for vocab/tags.yml from current tag usage"
+run = "python3 scripts/tags-suggest.py \"$@\""
+
+[tasks.tags-validate]
+description = "Validate frontmatter tags against vocab/tags.yml controlled vocabulary"
+run = "python3 scripts/tags-validate.py \"$@\""
+
+[tasks.archive]
+description = "Move a topic to archive/<YYYY>/<topic>/ (CREW closed stack). Usage: mise run archive <topic> [--reason X --successor topic]"
+run = "python3 scripts/archive.py \"$@\""
+
+[tasks.trace]
+description = "Append a berrypicking step to memory/seeking-trace.jsonl. Usage: mise run trace --query ... --hits a,b --picked a --next ... --strategy subject"
+run = "python3 scripts/log-trace.py \"$@\""
+
+[tasks.build-index]
+description = "Build BM25 full-text index over topics + references into memory/bm25-index.json"
+run = "python3 scripts/build-index.py"
+
+[tasks.search-fulltext]
+description = "BM25 ranked full-text search. Usage: mise run search-fulltext \"query\" [--top N] [--kind topic|reference]"
+run = "python3 scripts/search-fulltext.py \"$@\""
+
+[tasks.cited-by]
+description = "Show topics that cite the given reference (forward-chaining for berrypicking)"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+ref="${1:?Usage: mise run cited-by <reference-name>}"
+
+# Strip leading 'references/' or trailing '.md' for convenience.
+ref="${ref#references/}"
+ref="${ref%.md}"
+
+found=0
+for readme in topics/*/README.md; do
+  fm=$(awk '/^---$/{if(n++)exit}n' "$readme")
+  # Match either inline list or block list of sources.
+  if echo "$fm" | rg -q "^[[:space:]]*-[[:space:]]+\\\"?${ref}\\\"?[[:space:]]*$"; then
+    topic=$(basename "$(dirname "$readme")")
+    title=$(echo "$fm" | sed -n 's/^title: *"\\(.*\\)"/\\1/p' | head -1)
+    [ -z "$title" ] && title="$topic"
+    printf "%-50s %s\\n" "$topic" "$title"
+    found=$((found+1))
+  fi
+done
+
+if [ "$found" = "0" ]; then
+  echo "No topic cites '${ref}'." >&2
+  exit 1
+fi
+"""
+
+[tasks.cites]
+description = "List references cited by the given topic (backward-chaining for berrypicking)"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+topic="${1:?Usage: mise run cites <topic-name>}"
+readme="topics/${topic}/README.md"
+
+if [ ! -f "$readme" ]; then
+  echo "Topic not found: ${topic}" >&2
+  exit 1
+fi
+
+fm=$(awk '/^---$/{if(n++)exit}n' "$readme")
+
+# Inline form: sources: [a, b]
+inline=$(echo "$fm" | sed -n 's/^sources: *\\[\\(.*\\)\\]/\\1/p' | head -1)
+if [ -n "$inline" ]; then
+  echo "$inline" | tr ',' '\\n' | sed 's/^ *//;s/ *$//;s/^"//;s/"$//' | grep -v '^$'
+  exit 0
+fi
+
+# Block form: sources:\\n  - a\\n  - b
+echo "$fm" | awk '/^sources:/{f=1;next} f && /^  - /{gsub(/^  - /,"");gsub(/^"|"$/,"");print;next} f{exit}'
+"""
+
 [tasks.deploy]
 description = "Build viewer and deploy to Cloudflare Pages"
 run = """
@@ -360,18 +450,4 @@ npx wrangler pages deploy viewer/dist --project-name survey-any
 
 [tasks.list]
 description = "List all topics with status"
-run = """
-#!/usr/bin/env bash
-set -euo pipefail
-
-for readme in topics/*/README.md; do
-  [ -f "$readme" ] || continue
-  dir=$(dirname "$readme")
-  topic=$(basename "$dir")
-  st=$(sed -n 's/^status: *\\(.*\\)/\\1/p' "$readme" | head -1)
-  title=$(sed -n 's/^title: *"\\(.*\\)"/\\1/p' "$readme" | head -1)
-  [ -z "$title" ] && title="$topic"
-  [ -z "$st" ] && st="?"
-  printf "%-15s %-50s %s\\n" "[$st]" "$title" "topics/$topic/"
-done | sort
-"""
+run = "python3 scripts/review-due.py \"$@\""
