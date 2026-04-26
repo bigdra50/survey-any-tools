@@ -20,6 +20,9 @@ import sys
 from datetime import date
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _frontmatter import update_fields  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 TOPICS = ROOT / "topics"
 ARCHIVE = ROOT / "archive"
@@ -49,107 +52,45 @@ def parse_args() -> argparse.Namespace:
 
 
 def update_frontmatter(readme: Path, *, reason: str | None, successor: str | None) -> None:
+    """Stamp archive metadata onto an archived topic's README frontmatter.
+
+    Forces ``status: archived`` and ``archived_at: <today>``. Optional
+    ``archive_reason`` / ``redirect`` are written when ``reason`` /
+    ``successor`` are provided; pre-existing values for those keys are
+    preserved otherwise (matching the legacy line-level behaviour).
+    """
     text = readme.read_text(encoding="utf-8")
-    m = re.match(r"^(---\n)(.*?)(\n---)", text, re.S)
-    if not m:
+    if not re.match(r"^---\n", text):
         print(f"warn: no frontmatter in {readme}; appending markers", file=sys.stderr)
-        text = "---\n\n---\n" + text
-        m = re.match(r"^(---\n)(.*?)(\n---)", text, re.S)
-        if not m:
-            raise RuntimeError(f"failed to insert frontmatter markers into {readme}")
 
-    head, body, tail = m.group(1), m.group(2), m.group(3)
     today = date.today().isoformat()
+    updates: dict[str, str] = {
+        "status": "archived",
+        "archived_at": today,
+    }
+    if reason:
+        updates["archive_reason"] = f"{reason} ({REASONS[reason]})"
+    if successor:
+        updates["redirect"] = successor
 
-    # Force status to archived; preserve other fields.
-    body_lines = body.splitlines()
-    out: list[str] = []
-    seen = {"status": False, "archived_at": False, "archive_reason": False, "redirect": False}
-    for line in body_lines:
-        if line.startswith("status:"):
-            out.append(f"status: archived")
-            seen["status"] = True
-        elif line.startswith("archived_at:"):
-            out.append(f"archived_at: {today}")
-            seen["archived_at"] = True
-        elif line.startswith("archive_reason:"):
-            seen["archive_reason"] = True
-            if reason:
-                out.append(f"archive_reason: {reason} ({REASONS[reason]})")
-            else:
-                out.append(line)
-        elif line.startswith("redirect:"):
-            seen["redirect"] = True
-            if successor:
-                out.append(f"redirect: {successor}")
-            else:
-                out.append(line)
-        else:
-            out.append(line)
-
-    if not seen["status"]:
-        out.append("status: archived")
-    if not seen["archived_at"]:
-        out.append(f"archived_at: {today}")
-    if reason and not seen["archive_reason"]:
-        out.append(f"archive_reason: {reason} ({REASONS[reason]})")
-    if successor and not seen["redirect"]:
-        out.append(f"redirect: {successor}")
-
-    new_body = "\n".join(out)
-    new_text = head + new_body + tail + text[m.end():]
+    new_text = update_fields(text, updates=updates)
     readme.write_text(new_text, encoding="utf-8")
 
 
 def append_replaces(successor_readme: Path, archived_topic: str) -> bool:
-    """Add `archived_topic` to the successor's frontmatter `replaces:` list.
+    """Add ``archived_topic`` to the successor's frontmatter ``replaces:`` list.
 
-    Returns True if the file was modified. Uses line-level editing to keep the
-    rest of the frontmatter untouched. No-ops if the entry is already present.
+    Returns True if the file was modified. Existing inline / block list
+    style is preserved; a new ``replaces`` key is appended in block style
+    when missing. No-op when the entry is already present.
     """
     text = successor_readme.read_text(encoding="utf-8")
-    m = re.match(r"^(---\n)(.*?)(\n---)", text, re.S)
-    if not m:
+    if not re.match(r"^---\n", text):
         return False
-    head, body, tail = m.group(1), m.group(2), m.group(3)
-    body_lines = body.splitlines()
 
-    # Look for existing inline list `replaces: [a, b]`.
-    inline_idx = next(
-        (i for i, ln in enumerate(body_lines)
-         if re.match(r"^replaces:\s*\[.*\]\s*$", ln)),
-        None,
-    )
-    if inline_idx is not None:
-        line = body_lines[inline_idx]
-        m2 = re.match(r"^replaces:\s*\[(.*)\]\s*$", line)
-        items = [s.strip().strip('"') for s in m2.group(1).split(",") if s.strip()]
-        if archived_topic in items:
-            return False
-        items.append(archived_topic)
-        body_lines[inline_idx] = f"replaces: [{', '.join(items)}]"
-    else:
-        # Look for block list `replaces:\n  - a\n`.
-        block_idx = next(
-            (i for i, ln in enumerate(body_lines) if ln.rstrip() == "replaces:"),
-            None,
-        )
-        if block_idx is not None:
-            j = block_idx + 1
-            existing: list[str] = []
-            while j < len(body_lines) and re.match(r"^\s+-\s+", body_lines[j]):
-                m3 = re.match(r"^\s+-\s+(.*)", body_lines[j])
-                if m3:
-                    existing.append(m3.group(1).strip().strip('"'))
-                j += 1
-            if archived_topic in existing:
-                return False
-            body_lines.insert(j, f"  - {archived_topic}")
-        else:
-            # Append as new inline field at the end of frontmatter.
-            body_lines.append(f"replaces: [{archived_topic}]")
-
-    new_text = head + "\n".join(body_lines) + tail + text[m.end():]
+    new_text = update_fields(text, list_appends={"replaces": [archived_topic]})
+    if new_text == text:
+        return False
     successor_readme.write_text(new_text, encoding="utf-8")
     return True
 
@@ -232,7 +173,7 @@ def main() -> int:
         print(f"warn: backlinks regeneration failed: {e}", file=sys.stderr)
 
     print()
-    print(f"Archived. Run `mise run index` to refresh INDEX.md (it skips archive/).")
+    print("Archived. Run `mise run index` to refresh INDEX.md (it skips archive/).")
     return 0
 
 
