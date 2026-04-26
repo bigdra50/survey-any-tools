@@ -374,8 +374,12 @@ description = "Build BM25 full-text index over topics + references into memory/b
 run = "python3 scripts/build-index.py"
 
 [tasks.search-fulltext]
-description = "BM25 ranked full-text search. Usage: mise run search-fulltext \"query\" [--top N] [--kind topic|reference]"
+description = "Ranked full-text search (BM25 / --dense / --hybrid). Usage: mise run search-fulltext \"query\" [--top N] [--kind topic|reference] [--hybrid|--dense]"
 run = "python3 scripts/search-fulltext.py \"$@\""
+
+[tasks.build-embeddings]
+description = "Build dense sentence-transformer embeddings into memory/embeddings.npy (optional dep: sentence-transformers + numpy)"
+run = "python3 scripts/build-embeddings.py \"$@\""
 
 [tasks.cited-by]
 description = "Show topics that cite the given reference (forward-chaining for berrypicking)"
