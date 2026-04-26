@@ -473,6 +473,10 @@ run = "python3 scripts/link-papers.py \"$@\""
 description = "Insert 'Cited by' sections into references based on topic sources: fields"
 run = "python3 scripts/backlinks.py \"$@\""
 
+[tasks.tags-suggest]
+description = "Suggest controlled-vocabulary merges for vocab/tags.yml from current tag usage"
+run = "python3 scripts/tags-suggest.py \"$@\""
+
 [tasks.deploy]
 description = "Build viewer and deploy to Cloudflare Pages"
 run = """
