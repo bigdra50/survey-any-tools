@@ -15,10 +15,32 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 INDEX_PATH = ROOT / "memory" / "bm25-index.json"
+TOPICS_DIR = ROOT / "topics"
+REFS_DIR = ROOT / "references"
 
 import sys as _sys
 _sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _tokenizer import tokenize, BM25_K1 as K1, BM25_B as B  # noqa: E402
+
+
+def warn_if_stale(index_path: Path) -> None:
+    """Print a warning when source content is newer than the index."""
+    try:
+        index_mtime = index_path.stat().st_mtime
+    except OSError:
+        return
+    newest = 0.0
+    for d in (TOPICS_DIR, REFS_DIR):
+        for f in d.rglob("*.md"):
+            m = f.stat().st_mtime
+            if m > newest:
+                newest = m
+    if newest > index_mtime:
+        print(
+            "warn: bm25 index is older than source content. "
+            "Run `mise run build-index` to refresh.",
+            file=sys.stderr,
+        )
 
 
 
@@ -46,6 +68,7 @@ def main() -> int:
         print(f"index not found: {INDEX_PATH}. Run `mise run build-index` first.", file=sys.stderr)
         return 1
 
+    warn_if_stale(INDEX_PATH)
     index = json.loads(INDEX_PATH.read_text(encoding="utf-8"))
     qterms = tokenize(args.query)
     if not qterms:
