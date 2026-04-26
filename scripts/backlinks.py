@@ -47,8 +47,14 @@ def parse_frontmatter(text: str) -> dict[str, object]:
     return out
 
 
-def collect_backlinks() -> dict[str, list[tuple[str, str]]]:
-    """ref-name -> list[(topic-name, topic-title)]"""
+def collect_backlinks(known_refs: set[str]) -> dict[str, list[tuple[str, str]]]:
+    """ref-name -> list[(topic-name, topic-title)]
+
+    Only `sources:` entries that exactly match an existing reference stem are
+    accepted. Anything else (URLs, free-form citations, '../foo' attempts) is
+    silently dropped. This prevents path-traversal-style abuse where a topic
+    could otherwise cause writes outside references/ via auto-running pre-commit.
+    """
     backlinks: dict[str, list[tuple[str, str]]] = defaultdict(list)
     for readme in sorted(TOPICS.glob("*/README.md")):
         text = readme.read_text(encoding="utf-8")
@@ -56,8 +62,7 @@ def collect_backlinks() -> dict[str, list[tuple[str, str]]]:
         topic = readme.parent.name
         title = fm.get("title") or topic
         for src in fm.get("sources", []):
-            # Strip "url:" or "http..." which aren't reference names
-            if src.startswith("http") or ":" in src and not (REFS / f"{src}.md").exists():
+            if src not in known_refs:
                 continue
             backlinks[src].append((topic, str(title)))
     return backlinks
@@ -100,14 +105,18 @@ def remove_block(ref_path: Path) -> bool:
 
 
 def main() -> int:
-    backlinks = collect_backlinks()
+    refs_dir = REFS.resolve()
+    known_refs = {p.stem for p in refs_dir.glob("*.md")}
+    backlinks = collect_backlinks(known_refs)
     updated, removed = 0, 0
     seen: set[str] = set()
 
     for ref_name, entries in backlinks.items():
-        ref_path = REFS / f"{ref_name}.md"
-        if not ref_path.exists():
-            print(f"warn: source '{ref_name}' has no matching reference file", file=sys.stderr)
+        ref_path = (refs_dir / f"{ref_name}.md").resolve()
+        # Refuse anything that escapes references/ even if known_refs filter
+        # is bypassed by symlinks or future refactors.
+        if not ref_path.is_relative_to(refs_dir) or not ref_path.is_file():
+            print(f"warn: skipping suspicious ref path: {ref_name}", file=sys.stderr)
             continue
         seen.add(ref_path.name)
         if update_reference(ref_path, entries):
