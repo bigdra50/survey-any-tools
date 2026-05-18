@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Tag merge candidate detector for vocab/tags.yml authoring.
 
-Reads all topic frontmatter via mise's fm-dump task and groups tags by:
+Reads all topic frontmatter via mise's `fm` task and groups tags by:
   1. exact lowercased equality (cases of "AI" vs "ai")
   2. plural / singular collapse (agents <-> agent)
   3. hyphen variants (ai-agent <-> aiagent <-> ai_agent)
@@ -49,7 +49,7 @@ def collapse_key(tag: str) -> str:
 
 
 def fm_dump() -> list[dict]:
-    out = subprocess.check_output(["mise", "run", "fm-dump"], text=True, stderr=subprocess.DEVNULL)
+    out = subprocess.check_output(["mise", "run", "fm"], text=True, stderr=subprocess.DEVNULL)
     return json.loads(out)
 
 

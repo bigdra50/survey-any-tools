@@ -20,20 +20,14 @@ cmd="${1:?Usage: query.sh <command> [args...]}"
 shift
 
 case "$cmd" in
-  fm-dump)
-    mise -C "$REPO" run fm-dump 2>/dev/null
+  fm)
+    mise -C "$REPO" run fm 2>/dev/null
     ;;
   fm-tags)
     mise -C "$REPO" run fm-tags 2>/dev/null
     ;;
   fm-related)
     mise -C "$REPO" run fm-related "${1:?Usage: query.sh fm-related <topic>}" 2>/dev/null
-    ;;
-  search)
-    mise -C "$REPO" run search "${1:?Usage: query.sh search <tag>}" 2>/dev/null
-    ;;
-  list)
-    mise -C "$REPO" run list 2>/dev/null
     ;;
   read)
     topic="${1:?Usage: query.sh read <topic-name>}"
@@ -49,7 +43,8 @@ case "$cmd" in
     ;;
   *)
     echo "Unknown command: $cmd" >&2
-    echo "Commands: fm-dump, fm-tags, fm-related, search, list, read, path" >&2
+    echo "Commands: fm, fm-tags, fm-related, read, path" >&2
+    echo "Note: tag-search / list は 'fm | jq ...' で合成してください" >&2
     exit 1
     ;;
 esac

@@ -10,22 +10,30 @@ description: |
 
 リクエストに応じて適切な mise task を実行する。
 
+## プリミティブ
+
+`fm` が frontmatter を JSON 配列で出力する単一プリミティブ。一覧・検索・フィルタは `jq` と合成する。
+
+```bash
+mise run fm
+```
+
 ## 全件一覧
 
 ```bash
-mise run list
+mise run fm | jq -r '.[] | "\(.status)\t\(.title)\t\(.path)"'
 ```
 
 ## タグで検索
 
 ```bash
-mise run search <tag>
+mise run fm | jq '.[] | select(.tags | index("<tag>"))'
 ```
 
 ## 詳細フィルタリング
 
 ```bash
-mise run fm-dump | jq '<filter>'
+mise run fm | jq '<filter>'
 ```
 
 フィルタ例:

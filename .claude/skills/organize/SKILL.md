@@ -13,7 +13,7 @@ description: |
 ### 1. 現状把握
 
 ```bash
-mise run fm-dump
+mise run fm
 ```
 
 全トピックの frontmatter から以下を分析する:

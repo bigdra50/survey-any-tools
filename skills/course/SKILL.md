@@ -40,7 +40,7 @@ SURVEY_REPO=$(ghq list --full-path | grep 'survey-any$' | head -1)
 ### 3. 既存資料の棚卸し
 
 ```bash
-mise -C "$SURVEY_REPO" run fm-dump | jq '.[] | {topic, title, tags, status}'
+mise -C "$SURVEY_REPO" run fm | jq '.[] | {topic, title, tags, status}'
 mise -C "$SURVEY_REPO" run fm-tags
 ```
 
@@ -48,7 +48,7 @@ mise -C "$SURVEY_REPO" run fm-tags
 
 ```bash
 # タグで絞り込む例
-mise -C "$SURVEY_REPO" run fm-dump | jq --arg t "unity" '
+mise -C "$SURVEY_REPO" run fm | jq --arg t "unity" '
   .[] | select(.tags | index($t))
 '
 # references のタグも確認
@@ -107,9 +107,9 @@ done
 |---------|---------------|
 | 一般トピックの追加調査 | `/survey` |
 | 学術論文の深掘り | `/survey-paper` |
-| 単発の外部資料を記録だけしたい | `mise run new-reference <name>` で直接追加 |
+| 単発の外部資料を記録だけしたい | `mise run new reference <name>` で直接追加 |
 
-追加調査で生成された topics/references を再度 fm-dump で確認し、カバレッジが満たされたかチェックする。
+追加調査で生成された topics/references を再度 `fm` で確認し、カバレッジが満たされたかチェックする。
 満たされないまま 2 巡しても解消しない場合、「現時点で足りる範囲のコースを作る」方針にユーザー合意を取る。
 
 ### 6. カリキュラム設計

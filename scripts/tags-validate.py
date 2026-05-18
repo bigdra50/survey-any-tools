@@ -72,7 +72,7 @@ def load_vocab() -> tuple[set[str], dict[str, str]]:
 
 
 def fm_dump() -> list[dict]:
-    out = subprocess.check_output(["mise", "run", "fm-dump"], text=True, stderr=subprocess.DEVNULL)
+    out = subprocess.check_output(["mise", "run", "fm"], text=True, stderr=subprocess.DEVNULL)
     return json.loads(out)
 
 

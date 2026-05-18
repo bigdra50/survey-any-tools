@@ -39,7 +39,7 @@ rg -l '^status: unprocessed' inbox/*.md 2>/dev/null
 ### 3. 既存知識ベースの取得
 
 ```bash
-mise run fm-dump
+mise run fm
 ```
 
 全トピックのメタデータ（tags, title, status 等）を把握する。
@@ -74,13 +74,13 @@ Read でファイル全体を読む。特に注目する項目:
 
 **新規トピック作成の場合:**
 ```bash
-mise run new <topic-name>        # or new-report
+mise run new memo <topic-name>   # or `mise run new report <topic-name>`
 ```
 その後、生成された `topics/{topic}/README.md` の frontmatter（tags, related）と本文を埋める。
 
 **references 作成の場合:**
 ```bash
-mise run new-reference <name>    # or new-paper-reference
+mise run new reference <name>    # or `mise run new paper <name>`
 ```
 frontmatter と客観的内容記録を埋める。必要なら topics 側の `sources:` も更新。
 

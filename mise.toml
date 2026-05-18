@@ -1,63 +1,10 @@
+[tools]
+node = "22"
+"npm:wrangler" = "4"
+
 [tasks.new]
-description = "Create a new survey topic (memo template)"
-run = """
-#!/usr/bin/env bash
-set -euo pipefail
-
-topic="${1:?Usage: mise run new <topic-name>}"
-dir="topics/${topic}"
-today=$(date +%Y-%m-%dT%H:%M:%S%z)
-
-if [ -d "$dir" ]; then
-  echo "Error: ${dir} already exists" >&2
-  exit 1
-fi
-
-mkdir -p "$dir"
-sed "s/YYYY-MM-DD/${today}/g" templates/memo.md > "${dir}/README.md"
-echo "Created ${dir}/README.md"
-"""
-
-[tasks.new-report]
-description = "Create a new survey topic (report template)"
-run = """
-#!/usr/bin/env bash
-set -euo pipefail
-
-topic="${1:?Usage: mise run new-report <topic-name>}"
-dir="topics/${topic}"
-today=$(date +%Y-%m-%dT%H:%M:%S%z)
-
-if [ -d "$dir" ]; then
-  echo "Error: ${dir} already exists" >&2
-  exit 1
-fi
-
-mkdir -p "$dir"
-sed "s/YYYY-MM-DD/${today}/g" templates/report.md > "${dir}/README.md"
-echo "Created ${dir}/README.md"
-"""
-
-[tasks.new-notebook]
-description = "Create a new Jupyter Notebook topic"
-run = """
-#!/usr/bin/env bash
-set -euo pipefail
-
-topic="${1:?Usage: mise run new-notebook <topic-name>}"
-dir="topics/${topic}"
-today=$(date +%Y-%m-%dT%H:%M:%S%z)
-
-if [ -d "$dir" ]; then
-  echo "Error: ${dir} already exists" >&2
-  exit 1
-fi
-
-mkdir -p "$dir"
-sd 'YYYY-MM-DD' "${today}" templates/notebook.ipynb > "${dir}/analysis.ipynb" 2>/dev/null \
-  || sed "s/YYYY-MM-DD/${today}/g" templates/notebook.ipynb > "${dir}/analysis.ipynb"
-echo "Created ${dir}/analysis.ipynb"
-"""
+description = "Create a new survey artifact. Usage: mise run new <kind> <name> [args]. Kinds: memo|report|notebook|reference|paper|course|lesson|inbox"
+run = "python3 scripts/new.py \"$@\""
 
 [tasks.index]
 description = "Regenerate INDEX.md from topic and course frontmatter"
@@ -121,129 +68,8 @@ set -euo pipefail
 echo "INDEX.md updated"
 """
 
-[tasks.new-reference]
-description = "Create a new reference entry (external resource)"
-run = """
-#!/usr/bin/env bash
-set -euo pipefail
-
-name="${1:?Usage: mise run new-reference <name>}"
-file="references/${name}.md"
-today=$(date +%Y-%m-%dT%H:%M:%S%z)
-
-if [ -f "$file" ]; then
-  echo "Error: ${file} already exists" >&2
-  exit 1
-fi
-
-sed "s/YYYY-MM-DD/${today}/g" templates/reference.md > "${file}"
-echo "Created ${file}"
-"""
-
-[tasks.new-paper-reference]
-description = "Create a new paper reference (Ochiai format)"
-run = """
-#!/usr/bin/env bash
-set -euo pipefail
-
-name="${1:?Usage: mise run new-paper-reference <name>}"
-file="references/${name}.md"
-today=$(date +%Y-%m-%dT%H:%M:%S%z)
-
-if [ -f "$file" ]; then
-  echo "Error: ${file} already exists" >&2
-  exit 1
-fi
-
-sed "s/YYYY-MM-DD/${today}/g" templates/paper-reference.md > "${file}"
-echo "Created ${file}"
-"""
-
-[tasks.new-course]
-description = "Create a new learning course (course template)"
-run = """
-#!/usr/bin/env bash
-set -euo pipefail
-
-course="${1:?Usage: mise run new-course <course-name>}"
-dir="courses/${course}"
-today=$(date +%Y-%m-%dT%H:%M:%S%z)
-
-if [ -d "$dir" ]; then
-  echo "Error: ${dir} already exists" >&2
-  exit 1
-fi
-
-mkdir -p "$dir"
-sed "s/YYYY-MM-DD/${today}/g" templates/course.md > "${dir}/README.md"
-echo "Created ${dir}/README.md"
-"""
-
-[tasks.new-lesson]
-description = "Create a new lesson inside a course (auto-numbered)"
-run = """
-#!/usr/bin/env bash
-set -euo pipefail
-
-course="${1:?Usage: mise run new-lesson <course-name> <slug>}"
-slug="${2:?Usage: mise run new-lesson <course-name> <slug>}"
-dir="courses/${course}"
-
-if [ ! -d "$dir" ]; then
-  echo "Error: ${dir} does not exist. Run 'mise run new-course ${course}' first." >&2
-  exit 1
-fi
-
-# Next order: largest existing NN prefix + 1
-max=$(find "$dir" -maxdepth 1 -type f -name '[0-9][0-9]-*.md' -print 2>/dev/null \\
-  | sed 's|.*/||' | sed 's/^\\([0-9][0-9]\\)-.*/\\1/' | sort -n | tail -1)
-if [ -z "$max" ]; then
-  next=1
-else
-  next=$((10#$max + 1))
-fi
-order=$(printf '%02d' "$next")
-file="${dir}/${order}-${slug}.md"
-
-if [ -f "$file" ]; then
-  echo "Error: ${file} already exists" >&2
-  exit 1
-fi
-
-sed -e "s/^order: 0/order: ${next}/" templates/lesson.md > "$file"
-echo "Created ${file}"
-"""
-
-[tasks.new-inbox]
-description = "Create a new inbox entry (external capture)"
-run = """
-#!/usr/bin/env bash
-set -euo pipefail
-
-slug="${1:?Usage: mise run new-inbox <slug> [source_path]}"
-source_path="${2:-$PWD}"
-
-timestamp=$(date +%Y-%m-%d-%H%M%S)
-captured=$(date +%Y-%m-%dT%H:%M:%S%z)
-file="inbox/${timestamp}-${slug}.md"
-
-mkdir -p inbox
-
-if [ -f "$file" ]; then
-  echo "Error: ${file} already exists" >&2
-  exit 1
-fi
-
-esc_source=$(printf '%s' "$source_path" | sed 's/[\\/&]/\\\\&/g')
-sed -e "s/CAPTURED_AT/${captured}/" \\
-    -e "s/SOURCE_PATH/${esc_source}/" \\
-    templates/inbox.md > "${file}"
-
-echo "Created ${file}"
-"""
-
-[tasks.fm-dump]
-description = "Dump all topic frontmatter as JSON array"
+[tasks.fm]
+description = "Primitive: dump all topic frontmatter as JSON array (compose with jq for tags/related/search)"
 run = """
 #!/usr/bin/env bash
 set -euo pipefail
@@ -295,7 +121,7 @@ set -euo pipefail
 
 target="${1:?Usage: mise run fm-related <topic-name>}"
 
-dump=$(mise run fm-dump 2>/dev/null)
+dump=$(mise run fm 2>/dev/null)
 
 target_tags=$(echo "$dump" | jq -e --arg t "$target" '.[] | select(.topic == $t) | .tags')
 if [ $? -ne 0 ]; then
@@ -320,30 +146,12 @@ run = """
 #!/usr/bin/env bash
 set -euo pipefail
 
-mise run fm-dump 2>/dev/null | jq -r '.[].tags[]' | sort | uniq -c | sort -rn
+mise run fm 2>/dev/null | jq -r '.[].tags[]' | sort | uniq -c | sort -rn
 """
 
 [tasks.review-due]
 description = "List topics due for CREW/MUSTIE-style review (stale memo / in-progress / explicit review_at)"
 run = "python3 scripts/review-due.py \"$@\""
-
-[tasks.search]
-description = "Search topics by tag"
-run = """
-#!/usr/bin/env bash
-set -euo pipefail
-
-tag="${1:?Usage: mise run search <tag>}"
-echo "Topics tagged with: ${tag}"
-echo "---"
-rg -l "tags:.*${tag}" topics/*/README.md 2>/dev/null | while read -r f; do
-  dir=$(dirname "$f")
-  topic=$(basename "$dir")
-  title=$(sed -n 's/^title: *"\\(.*\\)"/\\1/p' "$f" | head -1)
-  [ -z "$title" ] && title="$topic"
-  echo "- ${title} (topics/${topic}/)"
-done
-"""
 
 [tasks.link-papers]
 description = "Link 'next papers' entries to existing references by arXiv ID / DOI"
@@ -449,13 +257,55 @@ cd viewer
 bun install --frozen-lockfile
 bun run build
 cd ..
-npx wrangler pages deploy viewer/dist --project-name survey-any
+wrangler pages deploy viewer/dist --project-name survey-any
 """
-
-[tasks.list]
-description = "List all topics with status"
-run = "python3 scripts/review-due.py \"$@\""
 
 [tasks.check-schema]
 description = "Detect drift between scripts/_schema.py (Python SoT) and viewer/src/content.config.ts (zod)"
 run = "python3 scripts/check-schema-drift.py"
+
+# --- Course progress sync (D1 + Pages Functions + Cloudflare Access) ----------
+
+[tasks.progress]
+description = "Course progress sync. Usage: mise run progress <list|get|set|reset|token> [args]"
+run = "python3 scripts/progress-cli.py \"$@\""
+
+[tasks.db]
+description = "D1 database operations. Usage: mise run db <migrate-local|migrate-remote|tables-local>"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+action="${1:?Usage: mise run db <migrate-local|migrate-remote|tables-local>}"
+shift
+case "$action" in
+  migrate-local)
+    wrangler d1 migrations apply survey-any-progress --local "$@"
+    ;;
+  migrate-remote)
+    wrangler d1 migrations apply survey-any-progress --remote "$@"
+    ;;
+  tables-local)
+    wrangler d1 execute survey-any-progress --local \\
+      --command="SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+    ;;
+  *)
+    echo "Unknown action: $action" >&2
+    echo "Actions: migrate-local, migrate-remote, tables-local" >&2
+    exit 1
+    ;;
+esac
+"""
+
+[tasks.pages-dev]
+description = "Build viewer and run wrangler pages dev with D1 + functions"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd viewer
+bun install
+bun run build
+# Stay inside viewer/ so wrangler discovers viewer/functions/.
+wrangler pages dev dist
+"""
