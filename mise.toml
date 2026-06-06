@@ -297,7 +297,7 @@ case "$action" in
 esac
 """
 
-[tasks.pages-dev]
+[tasks.preview]
 description = "Build viewer and run wrangler pages dev with D1 + functions"
 run = """
 #!/usr/bin/env bash
