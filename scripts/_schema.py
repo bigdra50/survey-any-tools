@@ -38,7 +38,9 @@ COURSE_STATUSES: Final[frozenset[str]] = frozenset(
 COURSE_DIFFICULTIES: Final[frozenset[str]] = frozenset(
     {"beginner", "intermediate", "advanced"}
 )
-REFERENCE_READ_DEPTHS: Final[frozenset[str]] = frozenset({"full", "abstract"})
+REFERENCE_READ_DEPTHS: Final[frozenset[str]] = frozenset(
+    {"full", "abstract", "overview"}
+)
 
 
 # ---------------------------------------------------------------------------

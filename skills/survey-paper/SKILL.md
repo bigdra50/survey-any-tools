@@ -95,7 +95,7 @@ mise -C "$SURVEY_REPO" run new-paper-reference <name>
 | 次に読むべき論文は？ | 引用先から重要なものをピックアップ |
 
 frontmatter も埋める:
-- `read_depth`: `full`（本文読了）or `abstract`（アブストラクトのみ）
+- `read_depth`: `full`（本文読了）/ `overview`（構成・要点は把握、詳細未読）/ `abstract`（アブストラクトのみ）
 - `arxiv_id`, `doi`: リンク解決の照合キーになるため、取得できたものは必ず記入する
 - `semantic_scholar_id`: 取得できたら記入
 - `citation_count`: Semantic Scholar から取得
