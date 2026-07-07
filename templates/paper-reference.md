@@ -18,7 +18,9 @@ read_depth: full
 #                          # 判定基準: venue ありなら peer-reviewed / 単著プレプリントは single-author-preprint / 公式ドキュメントは official-docs
 ---
 
-<!-- 構造・因果・対立を主張するなら図1点を assets/<reference-name>/ に置き相対参照する -->
+<!-- 図: 論文のアーキ図・主要結果のグラフ/表を assets/<reference-name>/ に同梱し相対参照する。
+     PDF は pdfimages -png、arXiv/ar5iv HTML は <img src> を curl -sL で取得。
+     キャプションに出典明記: ![Fig.1 …](./assets/<reference-name>/x.png) → *Fig.1: …（出典: 著者 arXiv:id）* -->
 ## どんなもの？
 
 ## 先行研究と比べて何が新しい？

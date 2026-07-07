@@ -16,6 +16,11 @@ effort: max
 
 学術論文の再帰的サーベイ。6項目サーベイで各論文をまとめ、引用グラフを飽和するまで探索する。
 
+このスキルは調査方法論を実装している（根拠は topics/systematic-inquiry-pkb-application）: 引用グラフ探索＝snowballing（Wohlin 2014, backward=references / forward=citations）、「新規 0 本で終了」＝理論的飽和、6 項目フォーマット＝three-pass reading（Keshav 2007）。以下 2 点を明示的に守ること:
+
+- **飽和判定は回数でなく「新規発見が尽きたか」で**。ただし引用数の少ない論文ばかりになったら早期に打ち切ってよい（5 節参照）。単一の停止ルールに固執しない
+- **triangulation（裏取り）**: 定量値（citation count・ベンチマーク数値等）は取得元 DB が食い違うことがある（Semantic Scholar / Google Scholar / Scopus で桁が違う例あり）。重要な数値は複数ソースで収束確認し、矛盾は reference に併記する
+
 前提: `ghq`, `mise`, `jq`, `curl`, `python3` がインストール済みであること。
 
 ## Workflow
@@ -99,6 +104,19 @@ frontmatter も埋める:
 - `arxiv_id`, `doi`: リンク解決の照合キーになるため、取得できたものは必ず記入する
 - `semantic_scholar_id`: 取得できたら記入
 - `citation_count`: Semantic Scholar から取得
+- **`strength:`**（R3。エビデンス強度。査読済み会議/誌なら `peer-reviewed`、arXiv のみ `preprint`、単著プレプリントは `single-author-preprint`）
+
+#### 4b'. 主要図表の抽出と同梱（積極的に行う）
+
+論文の理解は図で決まる。**アーキテクチャ図・主要結果のグラフ/表**を 1-2 枚抽出して reference に同梱する（テキストの数値だけで済ませない）。二重符号化（R8）で保持が上がり、後から読み返すときに本文再読より速く要点に届く。
+
+取得方法（本文取得手段に対応）:
+
+- **PDF から**: `pdfimages -png <paper.pdf> <prefix>`（figure をラスタ抽出）、または該当ページを画像化。図が多い場合は「Fig.1 アーキ図」「主要結果の表/グラフ」に絞る
+- **ar5iv / arXiv HTML から**: HTML 内の `<img src>`（`https://arxiv.org/html/<id>/...` 等の図 URL）を `curl -sL <img-url> -o <path>` で直接ダウンロード
+- 同梱先: `references/assets/<ref-name>/<file>`。相対参照 `![Fig.1 …](./assets/<ref-name>/<file>)` で貼る
+- キャプションに**出典を明記**（`*Fig.1: <何の図か>（出典: <著者> arXiv:<id>）*`）。arXiv は再利用可の図が多いが、ライセンスと出典明記が原則。判断がつかない図は貼らず URL リンクで代替
+- 図をそのまま貼るだけでなく、6項目の「技術のキモ」「どう検証した」の該当箇所から相対参照して文章と結びつける
 
 #### 4c. subagent の使い方
 
@@ -117,8 +135,12 @@ frontmatter も埋める:
 1. 論文本文を取得（優先順位: openAccessPdf → ar5iv HTML → arXiv PDF → abstract）
 2. `mise -C {SURVEY_REPO_ABSOLUTE_PATH} run new paper {ref_name}` で reference ファイルを作成
 3. 6項目サーベイの6項目を埋める
-4. frontmatter のメタデータを埋める
-5. Semantic Scholar API で引用（references）と被引用（citations）の両方を取得し、
+4. frontmatter のメタデータを埋める（`strength:` 含む）
+5. 主要図表を 1-2 枚抽出して同梱する（アーキ図・主要結果のグラフ/表）。
+   PDF は `pdfimages -png` で、ar5iv/arXiv HTML は `<img src>` を `curl -sL` で取得し、
+   `references/assets/{ref_name}/` に保存、`![Fig.N …](./assets/{ref_name}/<file>)` で相対参照。
+   キャプションに出典（著者 + arXiv ID + 図番号）を明記する
+6. Semantic Scholar API で引用（references）と被引用（citations）の両方を取得し、
    次に読むべき論文リストを作成する（各エントリに arXiv ID があれば必ず含める）
    - references: この論文が参照している先行研究（過去方向）
    - citations: この論文を引用している後続研究（未来方向・最新事例への到達に必須）
