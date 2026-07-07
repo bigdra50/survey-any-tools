@@ -140,3 +140,23 @@ Resolved Questions の更新:
 
 - viewer は survey-any（content 側）に残すか、public ツール側に置いて content を `SURVEY_ANY_ROOT` で読むかは Phase 3 で確定する（Cloudflare 連携が content 側にある点を優先）。
 - private content の履歴が public ツール repo に混入しないよう、subtree/filter-repo の切り出し範囲を厳密にする（topics/references を一切含めない）。
+
+## Phase 3 実装パラメータ（2026-07-08 確定）
+
+分離先 public repo = **`survey-any-tools`**。切り出しは **git-filter-repo を使い捨て clone 上で実行**（本番 survey-any の履歴は一切改変しない。survey-any 側のツール撤去は Phase 4 で通常 `git rm`）。
+
+**抽出対象（survey-any-tools へ、rename 全世代パスを literal 列挙）**:
+- `survey_any/` + 旧 `scripts/`（Phase 1/2 以前の CLI 開発履歴を落とさない）
+- `.apm/skills/` + 旧 `skills/` + `.claude/skills/`（filter-repo は rename 非追跡のため全世代指定）
+- `.claude/agents/`, `templates/`, `docs/`, `pyproject.toml`, `mise.toml`
+- `vocab/relation-types.yml` `strength-levels.yml` `maturity-levels.yml`（enum スキーマ）
+- `.github/workflows/checks.yml`（lint/doctor）
+
+**content 側（survey-any）残置**:
+- `topics/ references/ courses/ inbox/ memory/ wiki/ archive/`, `vocab/tags.yml`, `INDEX.md`, `tasks/`, `.githooks/pre-commit`
+- **Cloudflare クラスタ一体**: `viewer/ wrangler.toml migrations/ .dev.vars .github/workflows/deploy.yml`（D1 binding・secrets が content repo に紐づくため分割しない）
+- **移行中**: `survey_any/` ほかツールを**コピーで残置**（両方動く状態。「Phase 4 完了＝コピー削除」を期限付きチェックリストで縛る）
+
+**手順**: (1) 空の public repo 作成 (2) survey-any を使い捨て clone (3) `filter-repo --analyze` で事前確認 (4) paths-from-file を literal で作成 (5) `filter-repo --paths-from-file` 実行 (6) **検証5系統ゲート**（`git log --all` で content パスのコミット 0 件 / `ls-tree` で worktree に content 不在 / `rev-list --objects` で dangling blob 不在 / `git log --follow -- survey_any/commands/doctor.py` が Phase 1/2 以前まで遡れる） (7) 検証パス後に push (8) `doctor.py` の `load_relation_vocab()` を `content_root()/vocab` から CLI パッケージ内固定パス（`importlib.resources.files('survey_any')/'vocab'/...`）へ切り離し、pyproject の hatchling に enum yml の force-include を追加（`tags_validate.py` は `content_root()` のまま）。
+
+**最重要リスク**: 初回コミット時点で content と tool が同居しているため、パス列挙漏れで private content が public に流出しうる。**push 前に検証5系統（特に `log --all` の 0 件）を必須ゲートにする**。
