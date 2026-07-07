@@ -278,12 +278,12 @@ description = "Course progress sync. Usage: mise run progress <list|get|set|rese
 run = "python3 scripts/progress-cli.py \"$@\""
 
 [tasks.db]
-description = "D1 database operations. Usage: mise run db <migrate-local|migrate-remote|tables-local>"
+description = "D1 database operations. Usage: mise run db <migrate-local|migrate-remote|tables-local|sync-local|sync-remote>"
 run = """
 #!/usr/bin/env bash
 set -euo pipefail
 
-action="${1:?Usage: mise run db <migrate-local|migrate-remote|tables-local>}"
+action="${1:?Usage: mise run db <migrate-local|migrate-remote|tables-local|sync-local|sync-remote>}"
 shift
 case "$action" in
   migrate-local)
@@ -296,9 +296,15 @@ case "$action" in
     wrangler d1 execute survey-any-progress --local \\
       --command="SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
     ;;
+  sync-local)
+    python3 scripts/sync-content.py --local "$@"
+    ;;
+  sync-remote)
+    python3 scripts/sync-content.py --remote "$@"
+    ;;
   *)
     echo "Unknown action: $action" >&2
-    echo "Actions: migrate-local, migrate-remote, tables-local" >&2
+    echo "Actions: migrate-local, migrate-remote, tables-local, sync-local, sync-remote" >&2
     exit 1
     ;;
 esac
