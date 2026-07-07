@@ -12,10 +12,8 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-import sys as _sys
-_sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _frontmatter import parse_frontmatter, get_list  # noqa: E402
-from _root import content_root  # noqa: E402
+from survey_any._frontmatter import parse_frontmatter, get_list
+from survey_any._root import content_root
 
 ROOT = content_root()
 TOPICS = ROOT / "topics"
@@ -84,7 +82,7 @@ def remove_block(ref_path: Path) -> bool:
     return False
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     refs_dir = REFS.resolve()
     known_refs = {p.stem for p in refs_dir.glob("*.md")}
     backlinks = collect_backlinks(known_refs)

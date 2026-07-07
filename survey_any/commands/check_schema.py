@@ -5,7 +5,7 @@ Source of Truth: viewer/src/content.config.ts. Python dataclasses must mirror
 the zod field set 1:1. This script reads the .ts file as text, slices each
 `defineCollection({ ... })` block, walks the `schema: z.object({ ... })` body,
 and extracts the top-level field names. It then compares against the
-dataclass field set in scripts/_schema.py.
+dataclass field set in survey_any/_schema.py.
 
 Exit codes:
   0 — no drift
@@ -24,15 +24,13 @@ import re
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
-from _schema import (  # noqa: E402  — sys.path mutation above
+from survey_any._schema import (
     course_field_names,
     lesson_field_names,
     reference_field_names,
     topic_field_names,
 )
-from _root import content_root  # noqa: E402
+from survey_any._root import content_root
 
 ROOT = content_root()
 ZOD_FILE = ROOT / "viewer" / "src" / "content.config.ts"
@@ -172,7 +170,7 @@ _PYTHON_FIELDS: dict[str, frozenset[str]] = {
 }
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     if not ZOD_FILE.is_file():
         print(f"error: {ZOD_FILE} not found", file=sys.stderr)
         return 2
@@ -209,7 +207,7 @@ def main() -> int:
     if drift_found:
         print()
         print(
-            "drift: update scripts/_schema.py dataclasses to match "
+            "drift: update survey_any/_schema.py dataclasses to match "
             "viewer/src/content.config.ts (Source of Truth).",
             file=sys.stderr,
         )

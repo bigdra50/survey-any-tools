@@ -12,10 +12,8 @@ import json
 import os
 import sys
 from datetime import datetime, timezone
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _root import content_root  # noqa: E402
+from survey_any._root import content_root
 
 ROOT = content_root()
 TRACE = ROOT / "memory" / "seeking-trace.jsonl"
@@ -30,7 +28,7 @@ STRATEGIES = {
 }
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--query", required=True, help="検索クエリ")
     p.add_argument("--hits", default="", help="ヒットしたトピック (comma-separated)")
@@ -43,11 +41,11 @@ def parse_args() -> argparse.Namespace:
         help="Bates の戦略",
     )
     p.add_argument("--session", default=os.environ.get("CLAUDE_SESSION_ID", ""), help="セッション識別子")
-    return p.parse_args()
+    return p.parse_args(argv)
 
 
-def main() -> int:
-    args = parse_args()
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
 
     record = {
         "timestamp": datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds"),

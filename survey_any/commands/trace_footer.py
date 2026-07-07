@@ -10,8 +10,8 @@
 このスクリプトは topics/*/README.md の frontmatter を変更しない（本文末尾のみ）。
 
 Usage:
-    python3 scripts/trace-footer.py --dry-run   # 変更予定を表示するだけ（既定・安全）
-    python3 scripts/trace-footer.py --apply     # 実際にファイルへ書き込む
+    python3 -m survey_any trace-footer --dry-run   # 変更予定を表示するだけ（既定・安全）
+    python3 -m survey_any trace-footer --apply     # 実際にファイルへ書き込む
 """
 
 from __future__ import annotations
@@ -24,8 +24,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _root import content_root  # noqa: E402
+from survey_any._root import content_root
 
 ROOT = content_root()
 TOPICS = ROOT / "topics"
@@ -109,7 +108,7 @@ def compute_update(readme_path: Path, entries: list[TraceEntry]) -> tuple[str, s
     return text, new_text
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--dry-run", action="store_true", help="変更予定を表示するだけで書き込まない")
@@ -120,7 +119,7 @@ def main() -> int:
         default=TRACE_FILE,
         help="seeking-trace.jsonl のパス（既定: memory/seeking-trace.jsonl）",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     topics_dir = TOPICS.resolve()
     known_topics = {p.parent.name for p in topics_dir.glob("*/README.md")}

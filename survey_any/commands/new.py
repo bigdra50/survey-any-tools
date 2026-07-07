@@ -24,9 +24,8 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _frontmatter import update_fields  # noqa: E402
-from _root import content_root  # noqa: E402
+from survey_any._frontmatter import update_fields
+from survey_any._root import content_root
 
 REPO_ROOT = content_root()
 TEMPLATES = REPO_ROOT / "templates"
@@ -270,8 +269,8 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main() -> int:
-    args = build_parser().parse_args()
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
     KIND_HANDLERS[args.kind](args)
     return 0
 

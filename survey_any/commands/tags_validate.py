@@ -15,10 +15,8 @@ import json
 import subprocess
 import sys
 from collections import Counter, defaultdict
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _root import content_root  # noqa: E402
+from survey_any._root import content_root
 
 ROOT = content_root()
 VOCAB = ROOT / "vocab" / "tags.yml"
@@ -79,8 +77,9 @@ def fm_dump() -> list[dict]:
     return json.loads(out)
 
 
-def main() -> int:
-    strict = "--strict" in sys.argv
+def main(argv: list[str] | None = None) -> int:
+    args = sys.argv[1:] if argv is None else argv
+    strict = "--strict" in args
 
     preferred, alias = load_vocab()
     if not preferred:

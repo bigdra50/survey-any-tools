@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "survey-any"
+version = "0.1.0"
+description = "CLI for the survey-any personal knowledge base (doctor, new, backlinks, index, ...)"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+survey-any = "survey_any.cli:main"
+
+[project.optional-dependencies]
+dense = ["numpy", "sentence-transformers"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["survey_any"]

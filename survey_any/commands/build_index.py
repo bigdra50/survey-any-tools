@@ -14,15 +14,11 @@ from __future__ import annotations
 
 import json
 import math
-import re
 import sys
-from pathlib import Path
 
-import sys as _sys
-_sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _tokenizer import tokenize  # noqa: E402
-from _frontmatter import parse_frontmatter, split_frontmatter  # noqa: E402
-from _root import content_root  # noqa: E402
+from survey_any._tokenizer import tokenize
+from survey_any._frontmatter import parse_frontmatter, split_frontmatter
+from survey_any._root import content_root
 
 ROOT = content_root()
 TOPICS = ROOT / "topics"
@@ -99,7 +95,7 @@ def build_bm25(docs: list[dict]) -> dict:
     return {"N": N, "avgdl": avgdl, "idf": idf, "docs": doc_records}
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:  # argv unused: no CLI arguments
     docs = collect_docs()
     if not docs:
         print("no docs found", file=sys.stderr)

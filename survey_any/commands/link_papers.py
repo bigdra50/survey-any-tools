@@ -136,8 +136,9 @@ def collect_unlinked(threshold: int = 2) -> None:
         print(f"       言及元: {', '.join(sorted(set(sources)))}")
 
 
-def main():
-    dry_run = "--dry-run" in sys.argv
+def main(argv: list[str] | None = None) -> int:
+    args = sys.argv[1:] if argv is None else argv
+    dry_run = "--dry-run" in args
 
     index = build_index()
     print(f"Index: {len(index)} IDs from {len(set(index.values()))} references")
@@ -159,7 +160,8 @@ def main():
         print(f"\nRun without --dry-run to apply.")
 
     collect_unlinked()
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

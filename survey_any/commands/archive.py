@@ -5,7 +5,7 @@ ALA / Texas State Library CREW manual の closed stack 移管に対応する一�
 物理削除しない。後継 topic があれば redirect: で明示する。
 
 Usage:
-  python3 scripts/archive.py <topic-name> [--reason MUSTIE-letter] [--successor topic]
+  python3 -m survey_any archive <topic-name> [--reason MUSTIE-letter] [--successor topic]
 
 Reason letters: M U S T I E (see CLAUDE.md MUSTIE-PKB).
 """
@@ -13,6 +13,7 @@ Reason letters: M U S T I E (see CLAUDE.md MUSTIE-PKB).
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import shutil
 import subprocess
@@ -20,9 +21,8 @@ import sys
 from datetime import date
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _frontmatter import update_fields  # noqa: E402
-from _root import content_root  # noqa: E402
+from survey_any._frontmatter import update_fields
+from survey_any._root import content_root
 
 ROOT = content_root()
 TOPICS = ROOT / "topics"
@@ -42,14 +42,14 @@ REASONS = {
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9_-]*$")
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("topic", help="Topic name under topics/")
     p.add_argument("--reason", choices=list(REASONS), help="MUSTIE-PKB reason letter")
     p.add_argument("--successor", help="Successor topic name (sets redirect:)")
     p.add_argument("--year", type=int, default=date.today().year, help="Archive year folder")
     p.add_argument("--dry-run", action="store_true", help="Show planned move only")
-    return p.parse_args()
+    return p.parse_args(argv)
 
 
 def update_frontmatter(readme: Path, *, reason: str | None, successor: str | None) -> None:
@@ -96,8 +96,8 @@ def append_replaces(successor_readme: Path, archived_topic: str) -> bool:
     return True
 
 
-def main() -> int:
-    args = parse_args()
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
 
     if not SLUG_RE.match(args.topic):
         print(f"error: invalid topic name: {args.topic!r}", file=sys.stderr)
@@ -163,12 +163,12 @@ def main() -> int:
     # Regenerate citation back-pointers so references no longer link to the
     # archived path. backlinks.py only scans topics/, so any references that
     # used to cite the archived topic will lose their stale link automatically.
-    backlinks_script = ROOT / "scripts" / "backlinks.py"
     try:
         subprocess.run(
-            [sys.executable, str(backlinks_script)],
+            [sys.executable, "-m", "survey_any", "backlinks"],
             check=True,
             cwd=ROOT,
+            env={**os.environ, "SURVEY_ANY_ROOT": str(ROOT)},
         )
     except (subprocess.CalledProcessError, OSError) as e:
         print(f"warn: backlinks regeneration failed: {e}", file=sys.stderr)

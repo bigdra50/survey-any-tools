@@ -15,8 +15,8 @@ in the body of topics/*/README.md and references/*.md, skipping:
   - ``$`` that is already escaped (``\\$100``)
 
 Usage:
-  python3 scripts/fix-currency.py --dry-run
-  python3 scripts/fix-currency.py --apply
+  python3 -m survey_any fix-currency --dry-run
+  python3 -m survey_any fix-currency --apply
 
 Idempotent: running --apply twice in a row must report 0 changes on the
 second run (already-escaped ``\\$`` is excluded by the lookbehind).
@@ -30,9 +30,8 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _frontmatter import split_frontmatter  # noqa: E402
-from _root import content_root  # noqa: E402
+from survey_any._frontmatter import split_frontmatter
+from survey_any._root import content_root
 
 ROOT = content_root()
 TARGET_DIRS = ("topics", "references")
@@ -130,16 +129,16 @@ def iter_target_files() -> list[Path]:
     return files
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
     mode = p.add_mutually_exclusive_group(required=True)
     mode.add_argument("--dry-run", action="store_true", help="List files/counts without writing")
     mode.add_argument("--apply", action="store_true", help="Write escaped content back to files")
-    return p.parse_args()
+    return p.parse_args(argv)
 
 
-def main() -> int:
-    args = parse_args()
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
 
     results = [r for r in (process_file(f) for f in iter_target_files()) if r.count > 0]
 
@@ -164,4 +163,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    sys.exit(main())

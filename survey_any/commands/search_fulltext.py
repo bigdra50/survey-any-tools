@@ -11,7 +11,7 @@ memory/embeddings.npy + memory/embedding-meta.json. They fall back to BM25
 with a warning when either is missing.
 
 Usage:
-  python3 scripts/search-fulltext.py "query" [--top N] [--kind topic|reference]
+  python3 -m survey_any search-fulltext "query" [--top N] [--kind topic|reference]
                                               [--hybrid | --dense] [--rrf-k 60]
 """
 
@@ -23,8 +23,7 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _root import content_root  # noqa: E402
+from survey_any._root import content_root
 
 ROOT = content_root()
 INDEX_PATH = ROOT / "memory" / "bm25-index.json"
@@ -32,10 +31,7 @@ MEMORY = ROOT / "memory"
 TOPICS_DIR = ROOT / "topics"
 REFS_DIR = ROOT / "references"
 
-from _tokenizer import BM25_B as B  # noqa: E402
-from _tokenizer import BM25_K1 as K1  # noqa: E402
-from _tokenizer import tokenize  # noqa: E402
-from _embedding import (  # noqa: E402
+from survey_any._embedding import (
     EmbeddingIndex,
     EmbeddingUnavailable,
     cosine_scores,
@@ -44,6 +40,9 @@ from _embedding import (  # noqa: E402
     load_index,
     reciprocal_rank_fusion,
 )
+from survey_any._tokenizer import BM25_B as B
+from survey_any._tokenizer import BM25_K1 as K1
+from survey_any._tokenizer import tokenize
 
 
 @dataclass(frozen=True)
@@ -218,7 +217,7 @@ def resolve_dense(
     return loaded, None
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("query")
     p.add_argument("--top", type=int, default=10)
@@ -233,7 +232,7 @@ def main() -> int:
         default=100,
         help="cap each ranking to this size before RRF fusion (default 100)",
     )
-    args = p.parse_args()
+    args = p.parse_args(argv)
 
     if not INDEX_PATH.exists():
         print(

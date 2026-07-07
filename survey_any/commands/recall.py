@@ -8,7 +8,7 @@ et al. (2013). This script surfaces `recall:` self-test questions from topic
 frontmatter on a schedule and reschedules them via a simplified SM-2 update
 after the reader grades their own recall attempt.
 
-Not to be confused with `scripts/review-due.py`: that script flags topics for
+Not to be confused with `survey_any/commands/review_due.py`: that command flags topics for
 CREW/MUSTIE-style weeding (should this topic be archived / rewritten because
 it is stale?). This script is about relearning (should I retrieve this
 topic's content from memory again to keep it durable?). The two are
@@ -28,10 +28,10 @@ in `memory/recall-state.json`, keyed by topic directory name:
     }
 
 Usage:
-    python3 scripts/recall-review.py                  # list due topics + their recall: questions
-    python3 scripts/recall-review.py --all             # list all scheduled topics + state
-    python3 scripts/recall-review.py --grade <topic> <0-5>   # record a recall attempt, reschedule
-    python3 scripts/recall-review.py --json            # machine-readable due list
+    python3 -m survey_any recall                  # list due topics + their recall: questions
+    python3 -m survey_any recall --all             # list all scheduled topics + state
+    python3 -m survey_any recall --grade <topic> <0-5>   # record a recall attempt, reschedule
+    python3 -m survey_any recall --json            # machine-readable due list
 """
 
 from __future__ import annotations
@@ -41,11 +41,9 @@ import json
 import sys
 from dataclasses import asdict, dataclass
 from datetime import date, datetime
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _frontmatter import get_list, load_frontmatter  # noqa: E402
-from _root import content_root  # noqa: E402
+from survey_any._frontmatter import get_list, load_frontmatter
+from survey_any._root import content_root
 
 ROOT = content_root()
 TOPICS_DIR = ROOT / "topics"
@@ -209,7 +207,7 @@ def cmd_grade(topic: str, grade: int) -> int:
     return 0
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--all", action="store_true", help="List all recall-scheduled topics and their state")
     p.add_argument("--json", action="store_true", dest="emit_json", help="Emit due list as JSON")
@@ -219,7 +217,7 @@ def main() -> int:
         metavar=("TOPIC", "GRADE"),
         help="Record a recall attempt: --grade <topic-name> <0-5>",
     )
-    args = p.parse_args()
+    args = p.parse_args(argv)
 
     if args.grade:
         topic_name, grade_str = args.grade

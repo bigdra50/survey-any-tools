@@ -18,8 +18,8 @@ Robustness decisions:
     idempotent, and a partial failure self-heals on re-run (or --full).
 
 Usage:
-  python3 scripts/sync-content.py --local [--dry-run] [--full]
-  python3 scripts/sync-content.py --remote [--dry-run] [--full]
+  python3 -m survey_any sync-content --local [--dry-run] [--full]
+  python3 -m survey_any sync-content --remote [--dry-run] [--full]
 
 Env:
   WRANGLER_BIN  wrangler invocation (default "wrangler"; e.g. "npx -y wrangler@4")
@@ -40,10 +40,9 @@ import time
 from pathlib import Path
 from typing import Final, TypedDict
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _frontmatter import parse_frontmatter, split_frontmatter  # noqa: E402
-from _tokenizer import tokenize  # noqa: E402
-from _root import content_root  # noqa: E402
+from survey_any._frontmatter import parse_frontmatter, split_frontmatter
+from survey_any._tokenizer import tokenize
+from survey_any._root import content_root
 
 ROOT: Final[Path] = content_root()
 DB_NAME: Final[str] = "survey-any-progress"

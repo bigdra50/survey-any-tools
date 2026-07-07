@@ -4,7 +4,7 @@ node = "22"
 
 [tasks.new]
 description = "Create a new survey artifact. Usage: mise run new <kind> <name> [args]. Kinds: memo|report|notebook|reference|paper|course|lesson|inbox"
-run = "python3 scripts/new.py \"$@\""
+run = "python3 -m survey_any new \"$@\""
 
 [tasks.index]
 description = "Regenerate INDEX.md from topic and course frontmatter"
@@ -67,8 +67,8 @@ set -euo pipefail
 
 echo "INDEX.md updated"
 
-python3 scripts/backlinks.py
-python3 scripts/trace-footer.py --apply
+python3 -m survey_any backlinks
+python3 -m survey_any trace-footer --apply
 """
 
 [tasks.fm]
@@ -154,47 +154,47 @@ mise run fm 2>/dev/null | jq -r '.[].tags[]' | sort | uniq -c | sort -rn
 
 [tasks.review-due]
 description = "List topics due for CREW/MUSTIE-style review (stale memo / in-progress / explicit review_at)"
-run = "python3 scripts/review-due.py \"$@\""
+run = "python3 -m survey_any review-due \"$@\""
 
 [tasks.recall]
 description = "Spaced-repetition (SM-2) recall practice for topic `recall:` prompts. Usage: mise run recall [--all|--json|--grade <topic> <0-5>]"
-run = "python3 scripts/recall-review.py \"$@\""
+run = "python3 -m survey_any recall \"$@\""
 
 [tasks.link-papers]
 description = "Link 'next papers' entries to existing references by arXiv ID / DOI"
-run = "python3 scripts/link-papers.py \"$@\""
+run = "python3 -m survey_any link-papers \"$@\""
 
 [tasks.backlinks]
 description = "Insert 'Cited by' sections into references based on topic sources: fields"
-run = "python3 scripts/backlinks.py \"$@\""
+run = "python3 -m survey_any backlinks \"$@\""
 
 [tasks.tags-suggest]
 description = "Suggest controlled-vocabulary merges for vocab/tags.yml from current tag usage"
-run = "python3 scripts/tags-suggest.py \"$@\""
+run = "python3 -m survey_any tags-suggest \"$@\""
 
 [tasks.tags-validate]
 description = "Validate frontmatter tags against vocab/tags.yml controlled vocabulary"
-run = "python3 scripts/tags-validate.py \"$@\""
+run = "python3 -m survey_any tags-validate \"$@\""
 
 [tasks.archive]
 description = "Move a topic to archive/<YYYY>/<topic>/ (CREW closed stack). Usage: mise run archive <topic> [--reason X --successor topic]"
-run = "python3 scripts/archive.py \"$@\""
+run = "python3 -m survey_any archive \"$@\""
 
 [tasks.trace]
 description = "Append a berrypicking step to memory/seeking-trace.jsonl. Usage: mise run trace --query ... --hits a,b --picked a --next ... --strategy subject"
-run = "python3 scripts/log-trace.py \"$@\""
+run = "python3 -m survey_any trace \"$@\""
 
 [tasks.build-index]
 description = "Build BM25 full-text index over topics + references into memory/bm25-index.json"
-run = "python3 scripts/build-index.py"
+run = "python3 -m survey_any build-index"
 
 [tasks.search-fulltext]
 description = "Ranked full-text search (BM25 / --dense / --hybrid). Usage: mise run search-fulltext \"query\" [--top N] [--kind topic|reference] [--hybrid|--dense]"
-run = "python3 scripts/search-fulltext.py \"$@\""
+run = "python3 -m survey_any search-fulltext \"$@\""
 
 [tasks.build-embeddings]
 description = "Build dense sentence-transformer embeddings into memory/embeddings.npy (optional dep: sentence-transformers + numpy)"
-run = "python3 scripts/build-embeddings.py \"$@\""
+run = "python3 -m survey_any build-embeddings \"$@\""
 
 [tasks.cited-by]
 description = "Show topics that cite the given reference (forward-chaining for berrypicking)"
@@ -268,14 +268,14 @@ wrangler pages deploy viewer/dist --project-name survey-any
 """
 
 [tasks.check-schema]
-description = "Detect drift between scripts/_schema.py (Python SoT) and viewer/src/content.config.ts (zod)"
-run = "python3 scripts/check-schema-drift.py"
+description = "Detect drift between survey_any/_schema.py (Python SoT) and viewer/src/content.config.ts (zod)"
+run = "python3 -m survey_any check-schema"
 
 # --- Course progress sync (D1 + Pages Functions + Cloudflare Access) ----------
 
 [tasks.progress]
 description = "Course progress sync. Usage: mise run progress <list|get|set|reset|token> [args]"
-run = "python3 scripts/progress-cli.py \"$@\""
+run = "python3 -m survey_any progress \"$@\""
 
 [tasks.db]
 description = "D1 database operations. Usage: mise run db <migrate-local|migrate-remote|tables-local|sync-local|sync-remote>"
@@ -297,10 +297,10 @@ case "$action" in
       --command="SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
     ;;
   sync-local)
-    python3 scripts/sync-content.py --local "$@"
+    python3 -m survey_any sync-content --local "$@"
     ;;
   sync-remote)
-    python3 scripts/sync-content.py --remote "$@"
+    python3 -m survey_any sync-content --remote "$@"
     ;;
   *)
     echo "Unknown action: $action" >&2
@@ -335,16 +335,16 @@ bun run dev
 
 [tasks.doctor]
 description = "Cross-cutting consistency checks (sources/related/relations/links/dates/synthesis/strength/lessons/currency/external). Usage: mise run doctor [--json] [--only IDS] [--list]"
-run = "python3 scripts/doctor.py \"$@\""
+run = "python3 -m survey_any doctor \"$@\""
 
 [tasks.trace-footer]
 description = "Generate/update per-topic '## 探索経路' footer from memory/seeking-trace.jsonl. Usage: mise run trace-footer --dry-run|--apply"
-run = "python3 scripts/trace-footer.py \"$@\""
+run = "python3 -m survey_any trace-footer \"$@\""
 
 [tasks.suggest-related]
 description = "Suggest related: candidates for a topic (trace co-occurrence + shared sources + tag overlap). Usage: mise run suggest-related <topic> [--top N] [--json]"
-run = "python3 scripts/suggest-related.py \"$@\""
+run = "python3 -m survey_any suggest-related \"$@\""
 
 [tasks.fix-currency]
 description = "Escape bare $digit currency figures that remark-math misreads as inline math. Usage: mise run fix-currency --dry-run|--apply"
-run = "python3 scripts/fix-currency.py \"$@\""
+run = "python3 -m survey_any fix-currency \"$@\""

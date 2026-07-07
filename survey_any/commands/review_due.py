@@ -2,7 +2,7 @@
 """List topics/courses due for CREW/MUSTIE-style review.
 
 Replaces the bash + jq + sed/awk pipeline in mise.toml. Reads frontmatter
-through scripts/_frontmatter.py so the parsing rules stay in sync with
+through survey_any/_frontmatter.py so the parsing rules stay in sync with
 the rest of the toolchain.
 
 References hold immutable bibliographic records (date = publication date),
@@ -18,9 +18,8 @@ import sys
 from datetime import date, datetime
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _frontmatter import load_frontmatter  # noqa: E402
-from _root import content_root  # noqa: E402
+from survey_any._frontmatter import load_frontmatter
+from survey_any._root import content_root
 
 ROOT = content_root()
 
@@ -100,13 +99,13 @@ def _as_str(v) -> str | None:
     return str(v)
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--memo", type=int, default=DEFAULT_THRESHOLDS["memo"])
     p.add_argument("--inprog", type=int, default=DEFAULT_THRESHOLDS["in-progress"])
     p.add_argument("--done", type=int, default=DEFAULT_THRESHOLDS["done"])
     p.add_argument("--json", action="store_true", dest="emit_json")
-    args = p.parse_args()
+    args = p.parse_args(argv)
 
     thresholds = {
         "memo": args.memo,

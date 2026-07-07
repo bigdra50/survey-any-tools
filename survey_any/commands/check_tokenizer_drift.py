@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Detect drift between scripts/_tokenizer.py and viewer/functions/lib/tokenizer.ts.
+"""Detect drift between survey_any/_tokenizer.py and viewer/functions/lib/tokenizer.ts.
 
 The Python tokenizer produces the indexed tokens (sync-content), the TS port
 produces the query tokens (/api/search). Any divergence silently degrades
@@ -22,11 +22,9 @@ import shutil
 import sqlite3
 import subprocess
 import sys
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _tokenizer import tokenize  # noqa: E402
-from _root import content_root  # noqa: E402
+from survey_any._root import content_root
+from survey_any._tokenizer import tokenize
 
 ROOT = content_root()
 HARNESS = ROOT / "scripts" / "tokenizer-harness.ts"
@@ -128,7 +126,7 @@ def verify_fts5_round_trip(texts: list[str]) -> int:
     return len(missing)
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:  # argv unused: no CLI args
     if shutil.which("bun") is None:
         print("SKIP: bun is not installed (tokenizer drift check needs the TS harness)")
         return 3

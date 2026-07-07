@@ -154,7 +154,7 @@ def load_index(memory_dir: Path) -> EmbeddingIndex | EmbeddingUnavailable:
         return EmbeddingUnavailable(
             reason=(
                 f"dense index not found at {npy_path.name} / {meta_path.name}. "
-                "Run `python3 scripts/build-embeddings.py` first."
+                "Run `python3 -m survey_any build-embeddings` first."
             )
         )
 

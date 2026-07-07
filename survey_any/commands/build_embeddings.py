@@ -10,7 +10,7 @@ This script exits cleanly with a hint when either is missing; build-index.py
 (BM25) keeps working without them.
 
 Usage:
-  python3 scripts/build-embeddings.py [--model MODEL] [--batch-size N]
+  python3 -m survey_any build-embeddings [--model MODEL] [--batch-size N]
 """
 
 from __future__ import annotations
@@ -18,10 +18,8 @@ from __future__ import annotations
 import argparse
 import sys
 import time
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _embedding import (  # noqa: E402
+from survey_any._embedding import (
     DEFAULT_MODEL,
     EmbeddingDoc,
     encode_passages,
@@ -29,8 +27,8 @@ from _embedding import (  # noqa: E402
     import_sentence_transformers,
     save_index,
 )
-from _frontmatter import parse_frontmatter, split_frontmatter  # noqa: E402
-from _root import content_root  # noqa: E402
+from survey_any._frontmatter import parse_frontmatter, split_frontmatter
+from survey_any._root import content_root
 
 ROOT = content_root()
 TOPICS = ROOT / "topics"
@@ -73,11 +71,11 @@ def collect_docs() -> list[EmbeddingDoc]:
     return docs
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--model", default=DEFAULT_MODEL, help="sentence-transformers model id")
     parser.add_argument("--batch-size", type=int, default=16, help="encode batch size")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     np_module, np_err = import_numpy()
     if np_err is not None:

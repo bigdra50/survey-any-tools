@@ -18,10 +18,10 @@ skill prose) into one `mise run doctor` gate. Checks:
   external   run tags-validate.py --strict + check-schema-drift.py
 
 Usage:
-  python3 scripts/doctor.py                 # all checks, human-readable
-  python3 scripts/doctor.py --json          # machine-readable output
-  python3 scripts/doctor.py --only links,dates
-  python3 scripts/doctor.py --list          # list check ids
+  python3 -m survey_any doctor                 # all checks, human-readable
+  python3 -m survey_any doctor --json          # machine-readable output
+  python3 -m survey_any doctor --only links,dates
+  python3 -m survey_any doctor --list          # list check ids
 
 Exit codes:
   0 — no ERROR findings (WARN/INFO allowed)
@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -42,10 +43,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Final
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _frontmatter import get_list, parse_frontmatter, split_frontmatter  # noqa: E402
-from _schema import REFERENCE_STRENGTHS, TOPIC_MATURITIES, TOPIC_RELATION_TYPES  # noqa: E402
-from _root import content_root  # noqa: E402
+from survey_any._frontmatter import get_list, parse_frontmatter, split_frontmatter
+from survey_any._schema import REFERENCE_STRENGTHS, TOPIC_MATURITIES, TOPIC_RELATION_TYPES
+from survey_any._root import content_root
 
 ROOT: Final[Path] = content_root()
 TOPICS_DIR: Final[Path] = ROOT / "topics"
@@ -566,7 +566,7 @@ def check_currency(repo: Repo) -> list[Finding]:
                         path=doc.rel,
                         line=offset + i + 1,
                         message=f"{n} unescaped currency $ before a digit",
-                        suggestion="run `python3 scripts/fix-currency.py --apply`",
+                        suggestion="run `python3 -m survey_any fix-currency --apply`",
                     )
                 )
     return findings
@@ -608,7 +608,14 @@ def check_skills(repo: Repo) -> list[Finding]:
 def _run_tool(argv: list[str]) -> tuple[int | None, str]:
     """Run a subprocess, returning (returncode_or_None_on_launch_failure, head_of_output)."""
     try:
-        proc = subprocess.run(argv, cwd=ROOT, capture_output=True, text=True, timeout=300)
+        proc = subprocess.run(
+            argv,
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=300,
+            env={**os.environ, "SURVEY_ANY_ROOT": str(ROOT)},
+        )
     except (OSError, subprocess.TimeoutExpired) as exc:
         return None, str(exc)
     output = (proc.stdout + proc.stderr).strip()
@@ -619,7 +626,7 @@ def _run_tool(argv: list[str]) -> tuple[int | None, str]:
 def check_tokenizer(repo: Repo) -> list[Finding]:
     """Python/TS tokenizer parity (rc 3 = bun missing -> INFO, rc 1 = drift -> ERROR)."""
     del repo  # compares implementations, not content
-    rc, head = _run_tool([sys.executable, str(ROOT / "scripts" / "check-tokenizer-drift.py")])
+    rc, head = _run_tool([sys.executable, "-m", "survey_any", "check-tokenizer-drift"])
     if rc == 0:
         return []
     if rc == 3:
@@ -627,7 +634,7 @@ def check_tokenizer(repo: Repo) -> list[Finding]:
             Finding(
                 check="tokenizer",
                 severity="INFO",
-                path="scripts/check-tokenizer-drift.py",
+                path="survey_any/commands/check_tokenizer_drift.py",
                 message="skipped: bun is not installed",
             )
         ]
@@ -636,8 +643,8 @@ def check_tokenizer(repo: Repo) -> list[Finding]:
             check="tokenizer",
             severity="ERROR",
             path="viewer/functions/lib/tokenizer.ts",
-            message=f"tokenizer drift vs scripts/_tokenizer.py (rc={rc}): {head}",
-            suggestion="run `python3 scripts/check-tokenizer-drift.py` and re-sync the port",
+            message=f"tokenizer drift vs survey_any/_tokenizer.py (rc={rc}): {head}",
+            suggestion="run `python3 -m survey_any check-tokenizer-drift` and re-sync the port",
         )
     ]
 
@@ -647,10 +654,15 @@ def check_external(repo: Repo) -> list[Finding]:
     del repo  # signature parity with other checks
     findings: list[Finding] = []
 
-    rc, head = _run_tool([sys.executable, str(ROOT / "scripts" / "tags-validate.py"), "--strict"])
+    rc, head = _run_tool([sys.executable, "-m", "survey_any", "tags-validate", "--strict"])
     if rc is None:
         findings.append(
-            Finding(check="external", severity="WARN", path="scripts/tags-validate.py", message=f"failed to run: {head}")
+            Finding(
+                check="external",
+                severity="WARN",
+                path="survey_any/commands/tags_validate.py",
+                message=f"failed to run: {head}",
+            )
         )
     elif rc != 0:
         findings.append(
@@ -663,11 +675,11 @@ def check_external(repo: Repo) -> list[Finding]:
             )
         )
 
-    rc, head = _run_tool([sys.executable, str(ROOT / "scripts" / "check-schema-drift.py")])
+    rc, head = _run_tool([sys.executable, "-m", "survey_any", "check-schema"])
     if rc is None:
         findings.append(
             Finding(
-                check="external", severity="WARN", path="scripts/check-schema-drift.py", message=f"failed to run: {head}"
+                check="external", severity="WARN", path="survey_any/commands/check_schema.py", message=f"failed to run: {head}"
             )
         )
     elif rc != 0:
@@ -677,7 +689,7 @@ def check_external(repo: Repo) -> list[Finding]:
                 severity="ERROR",
                 path="viewer/src/content.config.ts",
                 message=f"schema drift detected (rc={rc}): {head}",
-                suggestion="sync scripts/_schema.py with viewer/src/content.config.ts",
+                suggestion="sync survey_any/_schema.py with viewer/src/content.config.ts",
             )
         )
     return findings

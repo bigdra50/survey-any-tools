@@ -25,7 +25,7 @@ see what the new signals surface that plain tag overlap misses (and vice
 versa).
 
 Usage:
-  python3 scripts/suggest-related.py <topic-name> [--top N] [--json]
+  python3 -m survey_any suggest-related <topic-name> [--top N] [--json]
 
 Weights (renormalized when a signal is unavailable):
   dense=0.5  trace=0.3  sources=0.2
@@ -37,12 +37,10 @@ import argparse
 import json
 import sys
 from dataclasses import dataclass, field
-from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _embedding import EmbeddingUnavailable, cosine_scores, load_index  # noqa: E402
-from _frontmatter import get_list, parse_frontmatter  # noqa: E402
-from _root import content_root  # noqa: E402
+from survey_any._embedding import EmbeddingUnavailable, cosine_scores, load_index
+from survey_any._frontmatter import get_list, parse_frontmatter
+from survey_any._root import content_root
 
 ROOT = content_root()
 TOPICS = ROOT / "topics"
@@ -329,12 +327,12 @@ def render_json(
     return json.dumps(payload, ensure_ascii=False, indent=2)
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("topic", help="topic directory name under topics/ (bare slug or topics/<slug>[/README.md] path)")
     parser.add_argument("--top", type=int, default=10, help="number of suggestions to show (default: 10)")
     parser.add_argument("--json", action="store_true", help="emit JSON instead of a text table")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     # slug 以外に topics/<slug> や topics/<slug>/README.md のパス形式も受け付ける
     args.topic = args.topic.rstrip("/")

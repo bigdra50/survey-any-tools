@@ -29,7 +29,7 @@ from typing import Final
 ENV_VAR: Final[str] = "SURVEY_ANY_ROOT"
 MARKER_DIR: Final[str] = "topics"
 
-# scripts/_root.py → scripts/ → repo root（従来 ROOT と一致する fallback）
+# survey_any/_root.py → survey_any/ → repo root（従来 ROOT と一致する fallback）
 _FALLBACK_ROOT: Final[Path] = Path(__file__).resolve().parent.parent
 
 

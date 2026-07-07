@@ -53,7 +53,7 @@ def fm_dump() -> list[dict]:
     return json.loads(out)
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:  # argv unused: no CLI args
     data = fm_dump()
     counter: Counter[str] = Counter()
     occurrences: dict[str, list[str]] = defaultdict(list)

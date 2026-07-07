@@ -203,8 +203,8 @@ HANDLERS = {
 }
 
 
-def main() -> None:
-    args = BuildParser().parse_args()
+def main(argv: list[str] | None = None) -> None:
+    args = BuildParser().parse_args(argv)
     HANDLERS[args.command](args)
 
 
