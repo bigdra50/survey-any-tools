@@ -1,0 +1,22 @@
+# vocab/maturity-levels.yml — topics frontmatter `maturity:` の統制語彙
+#
+# SOLO 分類 (Biggs & Collis 1982) の 4 段階を PKB 向けに写像した理解深度の軸。
+# `status:`（進行管理: done / in-progress / memo / archived）とは直交する。
+#   例: status: done かつ maturity: collected =「調べ終えたが合成していない」
+#       → doctor で合成不足を警告する対象 (tasks/reader-centered-design-2026-07.md R5)。
+#
+# 順序: collected < connected < integrated < generalized（後ほど深い）。
+#
+# スキーマ正本: scripts/_schema.py TOPIC_MATURITIES / viewer/src/content.config.ts
+
+# 事実・ソースを集めた段階（SOLO: 単一構造〜多構造の入口）
+collected:
+
+# 集めた事実を並べて比較・分類した段階（SOLO: 多構造）
+connected:
+
+# 矛盾を解消し一つの見解へ統合した段階（SOLO: 関係的）
+integrated:
+
+# 他領域へ一般化・抽象化して転移可能にした段階（SOLO: 拡張抽象）
+generalized:

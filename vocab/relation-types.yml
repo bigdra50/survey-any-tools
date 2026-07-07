@@ -1,0 +1,34 @@
+# vocab/relation-types.yml — topics frontmatter `relations[].type` の統制語彙
+#
+# 目的: 無型の `related:` では失われる「なぜ関連か」を型で保持する
+#       (Gentner 構造写像理論 1983 / Spiro 認知的柔軟性理論 1988)。
+#
+# 方向の読み方: 記述元トピック --type--> to のトピック。
+#   例: relations: [{to: X, type: contrasts, note: ...}] は「このトピックは X と対立する」。
+#
+# 設計判断 (tasks/reader-centered-design-2026-07.md R2):
+#   - 6 型で「発展 / 対立 / 反証 / 応用 / 類推 / 前提」の直交軸を最小構成で覆う。
+#     Zettelkasten 実務・セマンティック Wiki の型集合はより多いが、
+#     型が多いほど付与判断コストが上がるため 6 に絞った。必要になったら追加する
+#   - 双方向・無型の関連は既存 `related:` を使う（後方互換で併存、置換しない）
+#   - contrasts は note 必須運用（対立に見える文脈差の記録が主目的。doctor 検査候補）
+#
+# スキーマ正本: scripts/_schema.py TOPIC_RELATION_TYPES / viewer/src/content.config.ts
+
+# to の主張・手法を拡張・発展させる（このトピックが to の続き・一般化）
+extends:
+
+# to と結論・立場が対立または対比される（note で文脈差を補足する）
+contrasts:
+
+# to の主張を反証・棄却する証拠を提示する（contrasts より強い否定）
+refutes:
+
+# to の概念・理論を具体的な対象へ応用した内容である
+applies:
+
+# to と表面は異なるが構造が対応する（類推・アナロジー、転移の足がかり）
+analogous:
+
+# to を理解の前提とする（このトピックを読む前に to を読むべき）
+prereq:

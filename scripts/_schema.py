@@ -41,6 +41,28 @@ COURSE_DIFFICULTIES: Final[frozenset[str]] = frozenset(
 REFERENCE_READ_DEPTHS: Final[frozenset[str]] = frozenset(
     {"full", "abstract", "overview"}
 )
+# Controlled vocabularies live in vocab/ (one file per axis, with rationale):
+#   TOPIC_RELATION_TYPES -> vocab/relation-types.yml
+#   TOPIC_MATURITIES     -> vocab/maturity-levels.yml
+#   REFERENCE_STRENGTHS  -> vocab/strength-levels.yml
+TOPIC_RELATION_TYPES: Final[frozenset[str]] = frozenset(
+    {"extends", "contrasts", "refutes", "applies", "analogous", "prereq"}
+)
+TOPIC_MATURITIES: Final[frozenset[str]] = frozenset(
+    {"collected", "connected", "integrated", "generalized"}
+)
+REFERENCE_STRENGTHS: Final[frozenset[str]] = frozenset(
+    {
+        "meta-analysis",
+        "replicated",
+        "peer-reviewed",
+        "preprint",
+        "single-author-preprint",
+        "official-docs",
+        "blog",
+        "anecdote",
+    }
+)
 
 
 # ---------------------------------------------------------------------------
@@ -190,6 +212,19 @@ def _as_optional_enum(key: str, value: Any, allowed: frozenset[str]) -> str | No
 
 
 @dataclass(frozen=True)
+class TopicRelation:
+    """Item of the optional topics `relations:` list (typed link).
+
+    Direction reads "this topic --type--> to". Allowed `type` values are
+    `TOPIC_RELATION_TYPES` (vocab/relation-types.yml).
+    """
+
+    to: str
+    type: str
+    note: str | None = None
+
+
+@dataclass(frozen=True)
 class TopicFrontmatter:
     """Mirror of `topics` collection schema in viewer/src/content.config.ts."""
 
@@ -206,6 +241,10 @@ class TopicFrontmatter:
     archive_reason: str | None = None
     redirect: str | None = None
     replaces: list[str] = field(default_factory=list)
+    # Optional reader-centered fields (all default-empty; absent in most files).
+    relations: list[TopicRelation] = field(default_factory=list)
+    maturity: str | None = None
+    recall: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -228,6 +267,8 @@ class ReferenceFrontmatter:
     read_depth: str | None = None
     retrieved: date | None = None
     tags: list[str] = field(default_factory=list)
+    # Optional evidence-strength qualifier (vocab/strength-levels.yml).
+    strength: str | None = None
 
 
 @dataclass(frozen=True)
@@ -291,6 +332,38 @@ def lesson_field_names() -> frozenset[str]:
 # ---------------------------------------------------------------------------
 
 
+def _coerce_relations(key: str, value: Any) -> list[TopicRelation]:
+    """Coerce the optional topics `relations:` list of {to, type, note?}.
+
+    Note: `_frontmatter.parse_frontmatter` is a flat parser and flattens
+    nested list items to strings — pass frontmatter parsed with a
+    nesting-aware parser here. Flattened string items raise so the data
+    loss is visible instead of silent.
+    """
+    if value is None or value == "":
+        return []
+    if not isinstance(value, list):
+        raise ValueError(f"{key}: expected list of mappings, got {type(value).__name__}")
+    out: list[TopicRelation] = []
+    for i, item in enumerate(value):
+        if not isinstance(item, dict):
+            raise ValueError(
+                f"{key}[{i}]: expected mapping with to/type, got {item!r} "
+                "(nested list items need a nesting-aware YAML parse)"
+            )
+        to = item.get("to")
+        if not isinstance(to, str) or not to:
+            raise ValueError(f"{key}[{i}].to: required, got {item.get('to')!r}")
+        out.append(
+            TopicRelation(
+                to=to,
+                type=_as_enum(f"{key}[{i}].type", item.get("type"), TOPIC_RELATION_TYPES, None),
+                note=_as_str_or_none(f"{key}[{i}].note", item.get("note")),
+            )
+        )
+    return out
+
+
 def _coerce_sources_block(key: str, value: Any) -> CourseSources:
     if value is None or value == "":
         return CourseSources()
@@ -318,6 +391,9 @@ def validate_topic_fm(fm: dict[str, Any]) -> TopicFrontmatter:
         archive_reason=_as_str_or_none("archive_reason", fm.get("archive_reason")),
         redirect=_as_str_or_none("redirect", fm.get("redirect")),
         replaces=_as_str_list("replaces", fm.get("replaces")),
+        relations=_coerce_relations("relations", fm.get("relations")),
+        maturity=_as_optional_enum("maturity", fm.get("maturity"), TOPIC_MATURITIES),
+        recall=_as_str_list("recall", fm.get("recall")),
     )
 
 
@@ -342,6 +418,7 @@ def validate_reference_fm(fm: dict[str, Any]) -> ReferenceFrontmatter:
         read_depth=_as_optional_enum("read_depth", fm.get("read_depth"), REFERENCE_READ_DEPTHS),
         retrieved=_as_date_or_none("retrieved", fm.get("retrieved")),
         tags=_as_str_list("tags", fm.get("tags")),
+        strength=_as_optional_enum("strength", fm.get("strength"), REFERENCE_STRENGTHS),
     )
 
 
@@ -381,6 +458,10 @@ __all__: Iterable[str] = (
     "COURSE_STATUSES",
     "COURSE_DIFFICULTIES",
     "REFERENCE_READ_DEPTHS",
+    "TOPIC_RELATION_TYPES",
+    "TOPIC_MATURITIES",
+    "REFERENCE_STRENGTHS",
+    "TopicRelation",
     "TopicFrontmatter",
     "ReferenceFrontmatter",
     "CourseFrontmatter",

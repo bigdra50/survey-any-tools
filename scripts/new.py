@@ -18,17 +18,29 @@ Kinds:
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _frontmatter import update_fields  # noqa: E402
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES = REPO_ROOT / "templates"
+
+# reference/paper frontmatter fields that --batch entries and single-shot
+# flags (--title/--url/--type/--author/--organization) are allowed to set.
+REFERENCE_OVERRIDE_FIELDS = ("title", "url", "type", "author", "organization", "date")
 
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).astimezone().strftime("%Y-%m-%dT%H:%M:%S%z")
+
+
+def now_date() -> str:
+    return datetime.now().strftime("%Y-%m-%d")
 
 
 def render_template(template_path: Path, replacements: dict[str, str]) -> str:
@@ -65,10 +77,82 @@ def cmd_notebook(name: str) -> None:
     write_new(target, content)
 
 
-def cmd_reference(name: str, template_filename: str) -> None:
+def cmd_reference(
+    name: str,
+    template_filename: str,
+    *,
+    title: str | None = None,
+    url: str | None = None,
+    type_: str | None = None,
+    author: str | None = None,
+    organization: str | None = None,
+) -> None:
     target = REPO_ROOT / "references" / f"{name}.md"
-    content = render_template(TEMPLATES / template_filename, {"YYYY-MM-DD": now_iso()})
+    content = render_template(TEMPLATES / template_filename, {"YYYY-MM-DD": now_date()})
+    overrides = {
+        "title": title,
+        "url": url,
+        "type": type_,
+        "author": author,
+        "organization": organization,
+    }
+    updates = {k: v for k, v in overrides.items() if v is not None}
+    if updates:
+        content = update_fields(content, updates=updates)
     write_new(target, content)
+
+
+def cmd_reference_batch(template_filename: str, batch_path: Path) -> None:
+    """Create multiple references from a JSON array file.
+
+    Each entry: {name, title, url, type?, author?, organization?, date?, body?}.
+    Entries whose target file already exists are skipped with a warning;
+    the rest of the batch still runs.
+    """
+    try:
+        raw = json.loads(batch_path.read_text())
+    except (OSError, json.JSONDecodeError) as exc:
+        print(f"Error: failed to read batch file {batch_path}: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    if not isinstance(raw, list):
+        print("Error: --batch file must contain a JSON array", file=sys.stderr)
+        sys.exit(1)
+
+    created = 0
+    skipped = 0
+    for entry in raw:
+        if not isinstance(entry, dict) or not entry.get("name"):
+            print(f"Warning: skipping entry without 'name': {entry!r}", file=sys.stderr)
+            skipped += 1
+            continue
+
+        name = entry["name"]
+        target = REPO_ROOT / "references" / f"{name}.md"
+        if target.exists():
+            print(f"Warning: {target.relative_to(REPO_ROOT)} already exists, skipping", file=sys.stderr)
+            skipped += 1
+            continue
+
+        content = render_template(TEMPLATES / template_filename, {"YYYY-MM-DD": now_date()})
+        updates = {
+            field_name: str(entry[field_name])
+            for field_name in REFERENCE_OVERRIDE_FIELDS
+            if entry.get(field_name) is not None
+        }
+        if updates:
+            content = update_fields(content, updates=updates)
+
+        body = entry.get("body")
+        if body:
+            content = content.rstrip("\n") + "\n\n" + str(body).rstrip("\n") + "\n"
+
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content)
+        print(f"Created {target.relative_to(REPO_ROOT)}")
+        created += 1
+
+    print(f"Batch complete: {created} created, {skipped} skipped", file=sys.stderr)
 
 
 def cmd_course(name: str) -> None:
@@ -118,12 +202,30 @@ def cmd_inbox(slug: str, source: str | None) -> None:
     write_new(target, content)
 
 
+def _dispatch_reference(args: argparse.Namespace, template_filename: str) -> None:
+    if args.batch:
+        cmd_reference_batch(template_filename, Path(args.batch))
+        return
+    if not args.name:
+        print("Error: 'name' is required unless --batch is given", file=sys.stderr)
+        sys.exit(1)
+    cmd_reference(
+        args.name,
+        template_filename,
+        title=args.title,
+        url=args.url,
+        type_=args.type,
+        author=args.author,
+        organization=args.organization,
+    )
+
+
 KIND_HANDLERS = {
     "memo": lambda args: cmd_topic(args.name, "memo.md"),
     "report": lambda args: cmd_topic(args.name, "report.md"),
     "notebook": lambda args: cmd_notebook(args.name),
-    "reference": lambda args: cmd_reference(args.name, "reference.md"),
-    "paper": lambda args: cmd_reference(args.name, "paper-reference.md"),
+    "reference": lambda args: _dispatch_reference(args, "reference.md"),
+    "paper": lambda args: _dispatch_reference(args, "paper-reference.md"),
     "course": lambda args: cmd_course(args.name),
     "lesson": lambda args: cmd_lesson(args.course, args.slug),
     "inbox": lambda args: cmd_inbox(args.slug, args.source),
@@ -137,9 +239,24 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="kind", required=True)
 
-    for kind in ("memo", "report", "notebook", "reference", "paper", "course"):
+    for kind in ("memo", "report", "notebook", "course"):
         p = sub.add_parser(kind, help=f"Create a {kind}")
         p.add_argument("name")
+
+    for kind in ("reference", "paper"):
+        p = sub.add_parser(kind, help=f"Create a {kind}")
+        p.add_argument("name", nargs="?", default=None, help="Not needed with --batch")
+        p.add_argument("--title")
+        p.add_argument("--url")
+        p.add_argument("--type")
+        p.add_argument("--author")
+        p.add_argument("--organization")
+        p.add_argument(
+            "--batch",
+            metavar="JSON_FILE",
+            help="Create multiple references from a JSON array file "
+            "([{name, title, url, type?, author?, organization?, date?, body?}, ...])",
+        )
 
     p_lesson = sub.add_parser("lesson", help="Create a lesson inside a course (auto-numbered)")
     p_lesson.add_argument("course")

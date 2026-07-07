@@ -1,0 +1,39 @@
+# vocab/strength-levels.yml — references frontmatter `strength:` の統制語彙
+#
+# エビデンス強度。読者（と /ask）の信頼較正のための限定子
+# (Toulmin 論証モデルの qualifier / EBM の GRADE に倣う)。
+# 上から経験的主張の強い順に並べる。
+#
+# 設計判断 (tasks/reader-centered-design-2026-07.md R3):
+#   - 計画の 7 値に official-docs を加えた 8 値で確定。
+#     技術系 reference は仕様・公式ドキュメント由来が多く、
+#     blog と peer-reviewed の間に収まらないため独立値にした
+#   - official-docs のみ経験階層の外: API・仕様の「事実」には最も権威があるが、
+#     経験的主張（効果・性能比較など）の根拠にはならない
+#   - 既存 566 件への遡及付与はしない。doctor の「strength 欠落」警告で漸進的に付与
+#
+# スキーマ正本: scripts/_schema.py REFERENCE_STRENGTHS / viewer/src/content.config.ts
+
+# 複数研究の系統的統合（メタ分析・系統的レビュー）
+meta-analysis:
+
+# 独立した複数の研究・チームで再現された知見
+replicated:
+
+# 査読を通過した単一研究・論文
+peer-reviewed:
+
+# 査読前だが複数著者・研究機関によるプレプリント
+preprint:
+
+# 単著・査読なしのプレプリント（示唆レベルで扱う）
+single-author-preprint:
+
+# ベンダー・標準化団体の公式ドキュメント（仕様の事実には権威、経験的主張の根拠には非ず）
+official-docs:
+
+# 個人・企業ブログ、技術記事（実務知見だが第三者検証なし）
+blog:
+
+# 逸話・伝聞・単発の体験談（最弱。方向性の手がかりのみ）
+anecdote:

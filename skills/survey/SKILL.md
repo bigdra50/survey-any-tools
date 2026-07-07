@@ -28,14 +28,24 @@ SURVEY_REPO=$(ghq list --full-path | grep 'survey-any$' | head -1)
 
 ### 2. 既存トピックの探索
 
+トピック数が140件超のため `fm` の全件 dump からいきなり始めない。まず絞り込みで当たりを付ける:
+
 ```bash
-mise -C "$SURVEY_REPO" run fm
+mise -C "$SURVEY_REPO" run search-fulltext "<調査テーマのキーワード>" --top 10 --kind topic
+mise -C "$SURVEY_REPO" run fm-tags   # テーマに近い統制タグを確認
 ```
 
-出力JSONを確認し、依頼テーマと関連するトピックがあるか判断する。
+ヒットが出た範囲でのみ `fm` を絞り込んで詳細確認する:
+
+```bash
+mise -C "$SURVEY_REPO" run fm | jq --arg t "<タグ>" '.[] | select(.tags | index($t))'
+```
+
+出力を確認し、依頼テーマと関連するトピックがあるか判断する。
 判断材料: tags の重複、タイトルの類似性、テーマの包含関係。
 
 必要に応じて `mise -C "$SURVEY_REPO" run fm-related <topic>` で特定トピックとの関連度を確認する。
+全件 dump (`mise run fm` 単体) は上記で手がかりが得られなかった場合の最終手段に留める。
 
 ### 3. 方針決定
 
@@ -104,20 +114,50 @@ WebSearch / WebFetch で情報収集する。
 外部資料が見つかった場合:
 1. `mise -C "$SURVEY_REPO" run new reference <name>` で references/ にファイルを作成
 2. frontmatter（title, type, author, organization, url, date, retrieved, tags）を記入
-3. 本文には客観的な内容記録のみ。自分の意見は含めない
-4. topics 側の README.md の `sources:` フィールドに reference 名を追加
+3. **新規 reference には `strength:` を必須で付ける**（R3。エビデンス強度の統制語彙。強い順:
+   `meta-analysis / replicated / peer-reviewed / preprint / single-author-preprint / official-docs / blog / anecdote`）。
+   判定に迷う場合は著者数・査読有無・一次情報かで判断する
+4. 本文には客観的な内容記録のみ。自分の意見は含めない
+5. topics 側の README.md の `sources:` フィールドに reference 名を追加
 
 topics/README.md への記述:
 - frontmatter の `title`, `status`, `tags` を記入
 - 関連トピックがあれば `related` に記入
+- **`maturity:` を付ける**（R5。SOLO 分類。`collected`(事実を集めた) → `connected`(並べて比較した) →
+  `integrated`(矛盾を解消し統合した) → `generalized`(他領域へ一般化した)。`status` とは直交する軸で、
+  「調べただけ」か「統合まで到達したか」を区別する）
+- **`recall:` に核心を問う自問を 2-3 問置く**（R4。検索練習効果。答えは本文中にある状態にする。
+  例:「FAKTUAL と Geometric Entropy の結論はなぜ両立するか?」）
+- 既存トピックと関連が言える場合は `related`（無型）に加えて **`relations:` で型付きリンクにする**（R2）。
+  「なぜ関連か」を一言で言えない相手には付けない
+  ```yaml
+  relations:
+    - to: <topic-slug>
+      type: contrasts   # extends | contrasts | refutes | applies | analogous | prereq
+      note: 結論が対立して見えるが文脈が異なる
+  ```
 - 外部資料の要約ではなく、自分の分析・統合・所感を書く
 - references に記録済みの資料は `sources:` で参照し、本文での重複記載を避ける
+- 重要な主張には根拠の `strength:` を一言添える（例:「〜（プレプリント、示唆レベル）」）
+- 構造・因果・対立を主張する箇所には図を 1 点入れる（R8。二重符号化。ASCII 図で可。
+  画像を使う場合は `notes/assets/` 同様に相対参照で同梱する）
+
+#### 本文の段階開示（R1）
+
+本文冒頭は以下の 3 層構造に固定する。読者は最初に全体像を掴んでから詳細に降りる方が定着する:
+
+1. **位置づけ** 1-2 文（既知トピックとの関係を明示する。「〜の一種」「〜と対比される」等）
+2. **結論の要約**（箇条書き。本文を読まなくても核心が伝わる分量。必須）
+3. 調査内容の本文（詳細はここから）
 
 ### 6. 完了処理
 
 ```bash
 mise -C "$SURVEY_REPO" run index
 ```
+
+`mise -C "$SURVEY_REPO" run doctor` タスクが存在する場合は続けて実行し、ERROR が出たら（sources 参照切れ・
+related の片方向・strength/maturity 欠落など）その場で修正してから次に進む（存在しない場合はスキップ可）。
 
 berrypicking trace を 1 行記録する (新規調査の発端を残すため):
 
