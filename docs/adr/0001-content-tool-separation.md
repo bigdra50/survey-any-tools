@@ -113,4 +113,30 @@ Accepted（2026-07-08、下記 Resolved Questions で 3 論点を確定）。Pha
 
 1. **`vocab/tags.yml` の帰属 → コンテンツ側**。tags.yml は調査テーマに追従して増える可変辞書で利用者固有のため content repo に置く。検証ロジック（tags-validate）はツールだが、辞書はコンテンツ。対して `relation-types/strength-levels/maturity-levels.yml` は survey-any 手法の固定 enum スキーマ＝全利用者共通のため CLI にバンドルする（content でのオーバーライド余地は残す）。
 2. **ビューア → CLI 統合**（`survey-any serve`）。独立 repo にはしない。content root は `SURVEY_ANY_ROOT` で注入。
-3. **CLI 配布 → git+uv（private）**。PyPI 公開はしない。`uv tool install git+<repo>` で導入する。
+3. **CLI 配布 → git+uv（private）**。PyPI 公開はしない。`uv tool install git+<repo>` で導入する。（→ Revision 1 で public に変更）
+
+## Revision 1（2026-07-08）: 分割方向の反転 — ツールを出す
+
+当初の Migration Plan Phase 3 は「**コンテンツ**を新 `survey-content` repo へ出す（ツールは survey-any に残す）」だった。これを反転し、**コンテンツを survey-any に残し、ツールを新 public repo へ出す**。
+
+反転の理由:
+
+- survey-any は既に **private かつ Cloudflare Pages 連携済み**。コンテンツ（topics/references/... と viewer デプロイ）の正本をここに残せば、**Cloudflare 再設定が不要**で移行コストが最小。
+- ツール（CLI/viewer/skills/schema enum）は**コンテンツ非依存**なので public 化に支障がない。public にすることで `uv tool install` の公開配布が容易になる。
+- Phase 1 で `content_root()` が `SURVEY_ANY_ROOT` 対応済みのため、**content repo は survey-any 固定ではなく任意に差し替え可能**。新環境で別のコンテンツ置き場を指定でき、複数の知識ベースを 1 つの CLI で扱える。
+- CLI はローカル content root で完結するため **オフライン運用可**（/ask のリモート読み取り API はあくまで任意フォールバック）。
+
+Resolved Questions の更新:
+
+- **Q3 を変更**: CLI 配布 → **public repo**（新規、例 `survey-any-cli`）。`uv tool install git+<public-repo>`（将来 PyPI も選択肢）。ツールはコンテンツ非依存で公開に問題なし。
+- **新規決定 Q4**: content repo は survey-any 固定でなく、`SURVEY_ANY_ROOT`（or cwd）で**任意に差し替え可能**にする。survey-any は「デフォルトの、かつ Cloudflare 連携済みの」コンテンツ置き場という位置づけ。
+
+### Migration Plan（改訂 Phase 3/4）
+
+- **Phase 3（改訂）: ツールを public repo へ分離**。`survey_any/`（CLI）+ `pyproject.toml` + `viewer/` + `.apm/skills/` + `templates/` + `vocab/{relation,strength,maturity}-levels.yml`（enum スキーマ）を新 public repo へ `git subtree`/`filter-repo` で履歴ごと切り出す。survey-any には `topics/ references/ courses/ inbox/ memory/ wiki/ vocab/tags.yml` と Cloudflare 設定を残す。**当分 survey-any は「移行中」= ツールも複製で残し両方動く状態**を許容する。
+- **Phase 4（改訂）: 配布と content 差し替えの確立**。public ツールを `uv tool install`。CLI は `SURVEY_ANY_ROOT`（未設定なら cwd 上方探索）で content root を解決し、survey-any でも任意の content repo でも、**オフラインでも**動く。スキル SKILL.md を `survey-any <cmd>` ベースに。README を「ツール(public, uv) + content(任意, デフォルト survey-any)」の 2 系統に。
+
+### 影響・留意
+
+- viewer は survey-any（content 側）に残すか、public ツール側に置いて content を `SURVEY_ANY_ROOT` で読むかは Phase 3 で確定する（Cloudflare 連携が content 側にある点を優先）。
+- private content の履歴が public ツール repo に混入しないよう、subtree/filter-repo の切り出し範囲を厳密にする（topics/references を一切含めない）。
