@@ -26,8 +26,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _tokenizer import tokenize  # noqa: E402
+from _root import content_root  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = content_root()
 HARNESS = ROOT / "scripts" / "tokenizer-harness.ts"
 CORPUS_SAMPLE_SIZE = 20
 CORPUS_TRUNCATE_CHARS = 3000

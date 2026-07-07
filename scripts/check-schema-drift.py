@@ -24,10 +24,7 @@ import re
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-ZOD_FILE = ROOT / "viewer" / "src" / "content.config.ts"
-
-sys.path.insert(0, str(ROOT / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from _schema import (  # noqa: E402  — sys.path mutation above
     course_field_names,
@@ -35,6 +32,10 @@ from _schema import (  # noqa: E402  — sys.path mutation above
     reference_field_names,
     topic_field_names,
 )
+from _root import content_root  # noqa: E402
+
+ROOT = content_root()
+ZOD_FILE = ROOT / "viewer" / "src" / "content.config.ts"
 
 _COLLECTION_RE = re.compile(
     r"const\s+(?P<name>\w+)\s*=\s*defineCollection\s*\(\s*\{",

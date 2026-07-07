@@ -32,8 +32,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _frontmatter import split_frontmatter  # noqa: E402
+from _root import content_root  # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = content_root()
 TARGET_DIRS = ("topics", "references")
 
 _FENCE_RE = re.compile(r"^(\s*)(```+|~~~+)")

@@ -43,12 +43,13 @@ from dataclasses import asdict, dataclass
 from datetime import date, datetime
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-TOPICS_DIR = ROOT / "topics"
-STATE_PATH = ROOT / "memory" / "recall-state.json"
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _frontmatter import get_list, load_frontmatter  # noqa: E402
+from _root import content_root  # noqa: E402
+
+ROOT = content_root()
+TOPICS_DIR = ROOT / "topics"
+STATE_PATH = ROOT / "memory" / "recall-state.json"
 
 MIN_EASE = 1.3
 DEFAULT_EASE = 2.5

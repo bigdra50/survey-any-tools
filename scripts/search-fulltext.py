@@ -23,13 +23,15 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _root import content_root  # noqa: E402
+
+ROOT = content_root()
 INDEX_PATH = ROOT / "memory" / "bm25-index.json"
 MEMORY = ROOT / "memory"
 TOPICS_DIR = ROOT / "topics"
 REFS_DIR = ROOT / "references"
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _tokenizer import BM25_B as B  # noqa: E402
 from _tokenizer import BM25_K1 as K1  # noqa: E402
 from _tokenizer import tokenize  # noqa: E402

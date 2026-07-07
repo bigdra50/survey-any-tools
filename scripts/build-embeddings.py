@@ -20,11 +20,6 @@ import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-TOPICS = ROOT / "topics"
-REFS = ROOT / "references"
-MEMORY = ROOT / "memory"
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _embedding import (  # noqa: E402
     DEFAULT_MODEL,
@@ -35,6 +30,12 @@ from _embedding import (  # noqa: E402
     save_index,
 )
 from _frontmatter import parse_frontmatter, split_frontmatter  # noqa: E402
+from _root import content_root  # noqa: E402
+
+ROOT = content_root()
+TOPICS = ROOT / "topics"
+REFS = ROOT / "references"
+MEMORY = ROOT / "memory"
 
 
 def collect_docs() -> list[EmbeddingDoc]:

@@ -39,14 +39,15 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-TOPICS = ROOT / "topics"
-MEMORY = ROOT / "memory"
-TRACE_PATH = MEMORY / "seeking-trace.jsonl"
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _embedding import EmbeddingUnavailable, cosine_scores, load_index  # noqa: E402
 from _frontmatter import get_list, parse_frontmatter  # noqa: E402
+from _root import content_root  # noqa: E402
+
+ROOT = content_root()
+TOPICS = ROOT / "topics"
+MEMORY = ROOT / "memory"
+TRACE_PATH = MEMORY / "seeking-trace.jsonl"
 
 WEIGHT_DENSE = 0.5
 WEIGHT_TRACE = 0.3

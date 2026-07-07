@@ -18,10 +18,11 @@ import sys
 from datetime import date, datetime
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _frontmatter import load_frontmatter  # noqa: E402
+from _root import content_root  # noqa: E402
+
+ROOT = content_root()
 
 DEFAULT_THRESHOLDS = {
     "memo": 30,

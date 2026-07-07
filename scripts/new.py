@@ -26,8 +26,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _frontmatter import update_fields  # noqa: E402
+from _root import content_root  # noqa: E402
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT = content_root()
 TEMPLATES = REPO_ROOT / "templates"
 
 # reference/paper frontmatter fields that --batch entries and single-shot

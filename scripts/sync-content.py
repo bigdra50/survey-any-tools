@@ -43,8 +43,9 @@ from typing import Final, TypedDict
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _frontmatter import parse_frontmatter, split_frontmatter  # noqa: E402
 from _tokenizer import tokenize  # noqa: E402
+from _root import content_root  # noqa: E402
 
-ROOT: Final[Path] = Path(__file__).resolve().parent.parent
+ROOT: Final[Path] = content_root()
 DB_NAME: Final[str] = "survey-any-progress"
 
 # Hex literal doubles the byte count; 35KB payload -> ~70KB statement,

@@ -45,8 +45,9 @@ from typing import Callable, Final
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _frontmatter import get_list, parse_frontmatter, split_frontmatter  # noqa: E402
 from _schema import REFERENCE_STRENGTHS, TOPIC_MATURITIES, TOPIC_RELATION_TYPES  # noqa: E402
+from _root import content_root  # noqa: E402
 
-ROOT: Final[Path] = Path(__file__).resolve().parent.parent
+ROOT: Final[Path] = content_root()
 TOPICS_DIR: Final[Path] = ROOT / "topics"
 REFS_DIR: Final[Path] = ROOT / "references"
 COURSES_DIR: Final[Path] = ROOT / "courses"
