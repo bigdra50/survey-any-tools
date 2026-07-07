@@ -145,7 +145,7 @@ done
 ### 7. コース生成
 
 ```bash
-mise -C "$SURVEY_REPO" run new-course <course-name>
+mise -C "$SURVEY_REPO" run new course <course-name>
 ```
 
 README.md の frontmatter を埋める:
@@ -163,7 +163,7 @@ README.md 本文には以下を記述する。
 各レッスンについて順番にファイルを作成する。
 
 ```bash
-mise -C "$SURVEY_REPO" run new-lesson <course-name> <slug>
+mise -C "$SURVEY_REPO" run new lesson <course-name> <slug>
 ```
 
 レッスン本文のルール:

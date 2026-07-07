@@ -58,7 +58,7 @@ mise -C "$SURVEY_REPO" run fm
 ### 3. トピック作成
 
 ```bash
-mise -C "$SURVEY_REPO" run new-report <topic-name>
+mise -C "$SURVEY_REPO" run new report <topic-name>
 ```
 
 ### 4. 論文の読み込みと6項目サーベイまとめ
@@ -80,7 +80,7 @@ Read でPDFを読む場合: 1回20ページまで。長い論文は `pages: "1-2
 #### 4b. 6項目サーベイで reference 作成
 
 ```bash
-mise -C "$SURVEY_REPO" run new-paper-reference <name>
+mise -C "$SURVEY_REPO" run new paper <name>
 ```
 
 テンプレートの各セクションを埋める:
@@ -115,7 +115,7 @@ frontmatter も埋める:
 
 手順:
 1. 論文本文を取得（優先順位: openAccessPdf → ar5iv HTML → arXiv PDF → abstract）
-2. `mise -C {SURVEY_REPO_ABSOLUTE_PATH} run new-paper-reference {ref_name}` で reference ファイルを作成
+2. `mise -C {SURVEY_REPO_ABSOLUTE_PATH} run new paper {ref_name}` で reference ファイルを作成
 3. 6項目サーベイの6項目を埋める
 4. frontmatter のメタデータを埋める
 5. Semantic Scholar API で引用（references）と被引用（citations）の両方を取得し、

@@ -40,7 +40,7 @@ SOURCE_CWD=$(pwd)
 ### 3. inbox ファイルの生成
 
 ```bash
-mise -C "$SURVEY_REPO" run new-inbox "<slug>" "$SOURCE_CWD"
+mise -C "$SURVEY_REPO" run new inbox "<slug>" "$SOURCE_CWD"
 ```
 
 出力される `inbox/YYYY-MM-DD-HHMMSS-<slug>.md` のパスを控える。
