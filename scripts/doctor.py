@@ -13,6 +13,7 @@ skill prose) into one `mise run doctor` gate. Checks:
   strength   references without `strength:` (legacy backlog)        [INFO]
   lessons    lesson objectives / 理解度チェック section present      [WARN]
   currency   unescaped `$<digit>` outside code (KaTeX misparse)     [WARN]
+  skills     skill/agent prose references defined mise tasks        [ERROR]
   external   run tags-validate.py --strict + check-schema-drift.py
 
 Usage:
@@ -34,6 +35,7 @@ import json
 import re
 import subprocess
 import sys
+import tomllib
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
@@ -62,6 +64,17 @@ _HEADING_RE: Final[re.Pattern[str]] = re.compile(r"^#{1,6}\s")
 _CHECK_SECTION_RE: Final[re.Pattern[str]] = re.compile(r"^#{2,3}\s*理解度チェック")
 _YMD_RE: Final[re.Pattern[str]] = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _PARTIAL_DATE_RE: Final[re.Pattern[str]] = re.compile(r"^\d{4}(-\d{2})?$")
+_MISE_RUN_RE: Final[re.Pattern[str]] = re.compile(r"mise\s+(?:-C\s+\S+\s+)?run\s+([a-z][a-z0-9-]*)")
+_DOCTOR_IGNORE_MARK: Final[str] = "doctor: ignore-next-line"
+
+# Prompt files whose prose invokes mise tasks; both pre- and post-apm layouts
+# are listed so the check survives the skills/ -> .apm/skills/ migration.
+SKILL_PROSE_GLOBS: Final[tuple[str, ...]] = (
+    "skills/*/SKILL.md",
+    ".apm/skills/*/SKILL.md",
+    ".claude/skills/*/SKILL.md",
+    ".claude/agents/*.md",
+)
 
 
 @dataclass(frozen=True)
@@ -557,6 +570,39 @@ def check_currency(repo: Repo) -> list[Finding]:
     return findings
 
 
+def _load_mise_task_names() -> frozenset[str]:
+    """Task ids defined in mise.toml (subcommand-style tasks count as their first word)."""
+    data = tomllib.loads((ROOT / "mise.toml").read_text(encoding="utf-8"))
+    return frozenset(data.get("tasks", {}))
+
+
+def check_skills(repo: Repo) -> list[Finding]:
+    """`mise run <task>` references in skill/agent prose must name a defined task."""
+    del repo  # skills prose lives outside the content tree
+    tasks = _load_mise_task_names()
+    findings: list[Finding] = []
+    for pattern in SKILL_PROSE_GLOBS:
+        for path in sorted(ROOT.glob(pattern)):
+            lines = path.read_text(encoding="utf-8").splitlines()
+            for i, line in enumerate(lines):
+                if i > 0 and _DOCTOR_IGNORE_MARK in lines[i - 1]:
+                    continue
+                for name in _MISE_RUN_RE.findall(line):
+                    if name in tasks:
+                        continue
+                    findings.append(
+                        Finding(
+                            check="skills",
+                            severity="ERROR",
+                            path=str(path.relative_to(ROOT)),
+                            line=i + 1,
+                            message=f"references undefined mise task '{name}'",
+                            suggestion="fix the task name or add `<!-- doctor: ignore-next-line -->` above",
+                        )
+                    )
+    return findings
+
+
 def _run_tool(argv: list[str]) -> tuple[int | None, str]:
     """Run a subprocess, returning (returncode_or_None_on_launch_failure, head_of_output)."""
     try:
@@ -619,6 +665,7 @@ CHECKS: Final[dict[str, tuple[str, Callable[[Repo], list[Finding]]]]] = {
     "strength": ("references carry an evidence strength:", check_strength),
     "lessons": ("lessons have objectives + 理解度チェック", check_lessons),
     "currency": ("no unescaped currency $ outside code", check_currency),
+    "skills": ("skill/agent prose references defined mise tasks", check_skills),
     "external": ("tags-validate --strict + check-schema-drift", check_external),
 }
 
