@@ -8,9 +8,24 @@ from __future__ import annotations
 import re
 
 TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9_-]+|\d+")
-# Match runs of CJK characters; non-CJK acts as a token boundary so we don't
-# emit cross-phrase bigrams like "館情" from "図書館 と 情報学".
-CJK_RUN = re.compile(r"[぀-ヿ㐀-鿿豈-﫿]+")
+# Match runs of CJK *letters*; anything else acts as a token boundary so we
+# don't emit cross-phrase bigrams like "館情" from "図書館 と 情報学".
+# Written with explicit escapes: a previous literal range used 豈 (U+8C48, a
+# homoglyph of compatibility ideograph U+F900), silently extending the class
+# to U+8C48-U+FAFF and matching Hangul. Punctuation inside the kana blocks
+# (・ U+30FB, ゠ U+30A0, ゛゜ U+309B-C, combining marks) is excluded so every
+# bigram survives FTS5 unicode61 as a single term (see check-tokenizer-drift).
+CJK_RUN = re.compile(
+    "["
+    "\u3041-\u3096"  # hiragana (small-a .. ke)
+    "\u309d-\u309f"  # hiragana iteration marks + digraph
+    "\u30a1-\u30fa"  # katakana (small-a .. vo)
+    "\u30fc-\u30ff"  # prolonged sound mark + iteration marks + digraph
+    "\u3400-\u9fff"  # CJK ext A + unified ideographs
+    "\uf900-\ufaff"  # CJK compatibility ideographs
+    "]+"
+)
+
 STOPWORDS = frozenset(
     {
         "the", "and", "for", "with", "from", "this", "that", "are", "was", "but",
