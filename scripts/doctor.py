@@ -14,6 +14,7 @@ skill prose) into one `mise run doctor` gate. Checks:
   lessons    lesson objectives / 理解度チェック section present      [WARN]
   currency   unescaped `$<digit>` outside code (KaTeX misparse)     [WARN]
   skills     skill/agent prose references defined mise tasks        [ERROR]
+  tokenizer  _tokenizer.py and tokenizer.ts tokenize identically    [ERROR]
   external   run tags-validate.py --strict + check-schema-drift.py
 
 Usage:
@@ -614,6 +615,32 @@ def _run_tool(argv: list[str]) -> tuple[int | None, str]:
     return proc.returncode, head
 
 
+def check_tokenizer(repo: Repo) -> list[Finding]:
+    """Python/TS tokenizer parity (rc 3 = bun missing -> INFO, rc 1 = drift -> ERROR)."""
+    del repo  # compares implementations, not content
+    rc, head = _run_tool([sys.executable, str(ROOT / "scripts" / "check-tokenizer-drift.py")])
+    if rc == 0:
+        return []
+    if rc == 3:
+        return [
+            Finding(
+                check="tokenizer",
+                severity="INFO",
+                path="scripts/check-tokenizer-drift.py",
+                message="skipped: bun is not installed",
+            )
+        ]
+    return [
+        Finding(
+            check="tokenizer",
+            severity="ERROR",
+            path="viewer/functions/lib/tokenizer.ts",
+            message=f"tokenizer drift vs scripts/_tokenizer.py (rc={rc}): {head}",
+            suggestion="run `python3 scripts/check-tokenizer-drift.py` and re-sync the port",
+        )
+    ]
+
+
 def check_external(repo: Repo) -> list[Finding]:
     """Aggregate the existing linters: tags-validate.py --strict and check-schema-drift.py."""
     del repo  # signature parity with other checks
@@ -666,6 +693,7 @@ CHECKS: Final[dict[str, tuple[str, Callable[[Repo], list[Finding]]]]] = {
     "lessons": ("lessons have objectives + 理解度チェック", check_lessons),
     "currency": ("no unescaped currency $ outside code", check_currency),
     "skills": ("skill/agent prose references defined mise tasks", check_skills),
+    "tokenizer": ("_tokenizer.py and tokenizer.ts tokenize identically", check_tokenizer),
     "external": ("tags-validate --strict + check-schema-drift", check_external),
 }
 

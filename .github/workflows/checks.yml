@@ -10,7 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
       # Full doctor still reports legacy content errors (sources/links), so the
       # CI gate runs only the checks that are green and must stay green.
-      - name: doctor (skills, external)
-        run: python3 scripts/doctor.py --only skills,external
+      - name: doctor (skills, tokenizer, external)
+        run: python3 scripts/doctor.py --only skills,tokenizer,external
