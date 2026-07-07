@@ -18,6 +18,7 @@ Kinds:
 from __future__ import annotations
 
 import argparse
+import importlib.resources as _res
 import json
 import re
 import sys
@@ -28,7 +29,13 @@ from survey_any._frontmatter import update_fields
 from survey_any._root import content_root
 
 REPO_ROOT = content_root()
-TEMPLATES = REPO_ROOT / "templates"
+
+# Prefer a content-root override (topics-side `templates/`) when present so a
+# repo can customize its templates; otherwise fall back to the templates that
+# ship inside the package (a bare content root has no `templates/` dir).
+_BUNDLED_TEMPLATES = _res.files("survey_any") / "templates"
+_CONTENT_TEMPLATES = REPO_ROOT / "templates"
+TEMPLATES = _CONTENT_TEMPLATES if _CONTENT_TEMPLATES.is_dir() else _BUNDLED_TEMPLATES
 
 # reference/paper frontmatter fields that --batch entries and single-shot
 # flags (--title/--url/--type/--author/--organization) are allowed to set.

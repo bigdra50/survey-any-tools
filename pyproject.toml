@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "survey-any"
-version = "0.1.0"
-description = "CLI for the survey-any personal knowledge base (doctor, new, backlinks, index, ...)"
+version = "0.2.0"
+description = "CLI for the survey-any personal knowledge base (doctor, new, backlinks, index, ...). Bundles templates and the tokenizer harness; works against any content root."
 requires-python = ">=3.11"
 dependencies = []
 

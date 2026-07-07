@@ -17,7 +17,9 @@ Exit codes:
 
 from __future__ import annotations
 
+import importlib.resources as _res
 import json
+import os
 import shutil
 import sqlite3
 import subprocess
@@ -27,7 +29,10 @@ from survey_any._root import content_root
 from survey_any._tokenizer import tokenize
 
 ROOT = content_root()
-HARNESS = ROOT / "scripts" / "tokenizer-harness.ts"
+# The harness ships inside the package now (a bare content root has no
+# scripts/). importlib.resources gives a real filesystem path for the normal
+# directory install (uv tool), which bun needs.
+HARNESS = _res.files("survey_any") / "tokenizer-harness.ts"
 CORPUS_SAMPLE_SIZE = 20
 CORPUS_TRUNCATE_CHARS = 3000
 FTS5_TOKENIZE = "unicode61 tokenchars '-_'"
@@ -75,6 +80,7 @@ def load_corpus_sample() -> list[str]:
 
 def run_ts_tokenizer(texts: list[str]) -> list[list[str]] | None:
     """Tokenize via bun harness; None means the harness itself failed."""
+    viewer_tokenizer = ROOT / "viewer" / "functions" / "lib" / "tokenizer.ts"
     proc = subprocess.run(
         ["bun", str(HARNESS)],
         input=json.dumps(texts),
@@ -82,6 +88,7 @@ def run_ts_tokenizer(texts: list[str]) -> list[list[str]] | None:
         text=True,
         cwd=ROOT,
         timeout=120,
+        env={**os.environ, "VIEWER_TOKENIZER": str(viewer_tokenizer)},
     )
     if proc.returncode != 0:
         print(f"harness failed (rc={proc.returncode}): {proc.stderr.strip()[:500]}", file=sys.stderr)

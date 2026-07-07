@@ -32,10 +32,12 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import contextlib
+import importlib
+import io
 import json
 import os
 import re
-import subprocess
 import sys
 import tomllib
 from dataclasses import asdict, dataclass
@@ -605,28 +607,42 @@ def check_skills(repo: Repo) -> list[Finding]:
     return findings
 
 
-def _run_tool(argv: list[str]) -> tuple[int | None, str]:
-    """Run a subprocess, returning (returncode_or_None_on_launch_failure, head_of_output)."""
+def _head(output: str) -> str:
+    """First three nonempty output lines joined by '; '."""
+    return "; ".join(line.strip() for line in output.strip().splitlines()[:3] if line.strip())
+
+
+def _run_subcommand(name: str, argv: list[str]) -> tuple[int | None, str]:
+    """Run a survey-any subcommand IN-PROCESS, same (rc, head) contract as a subprocess.
+
+    Imports ``survey_any.commands.<name with '-'→'_'>`` and calls its
+    ``main(argv)`` while capturing stdout+stderr. This avoids the fragile
+    ``sys.executable -m survey_any`` re-exec that traceback's under uvx (where
+    ``sys.executable`` is the ephemeral tool venv, not an importable module).
+
+    Returns ``(rc, head)`` where ``rc`` is ``int | None`` (``None`` maps to 0)
+    and ``head`` is the first three nonempty output lines joined by "; ". A
+    raised exception is reported as ``(1, str(exc))``.
+    """
+    os.environ["SURVEY_ANY_ROOT"] = str(ROOT)
+    module_name = f"survey_any.commands.{name.replace('-', '_')}"
+    buf = io.StringIO()
     try:
-        proc = subprocess.run(
-            argv,
-            cwd=ROOT,
-            capture_output=True,
-            text=True,
-            timeout=300,
-            env={**os.environ, "SURVEY_ANY_ROOT": str(ROOT)},
-        )
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        return None, str(exc)
-    output = (proc.stdout + proc.stderr).strip()
-    head = "; ".join(line.strip() for line in output.splitlines()[:3] if line.strip())
-    return proc.returncode, head
+        module = importlib.import_module(module_name)
+        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+            rc = module.main(argv)
+    except SystemExit as exc:  # a sub-command that calls sys.exit() instead of returning
+        code = exc.code
+        rc = code if isinstance(code, int) else (0 if code is None else 1)
+    except Exception as exc:  # noqa: BLE001 — surface any failure as rc=1, mirroring a nonzero exit
+        return 1, str(exc)[:500]
+    return (0 if rc is None else rc), _head(buf.getvalue())
 
 
 def check_tokenizer(repo: Repo) -> list[Finding]:
     """Python/TS tokenizer parity (rc 3 = bun missing -> INFO, rc 1 = drift -> ERROR)."""
     del repo  # compares implementations, not content
-    rc, head = _run_tool([sys.executable, "-m", "survey_any", "check-tokenizer-drift"])
+    rc, head = _run_subcommand("check-tokenizer-drift", [])
     if rc == 0:
         return []
     if rc == 3:
@@ -654,7 +670,7 @@ def check_external(repo: Repo) -> list[Finding]:
     del repo  # signature parity with other checks
     findings: list[Finding] = []
 
-    rc, head = _run_tool([sys.executable, "-m", "survey_any", "tags-validate", "--strict"])
+    rc, head = _run_subcommand("tags-validate", ["--strict"])
     if rc is None:
         findings.append(
             Finding(
@@ -675,7 +691,7 @@ def check_external(repo: Repo) -> list[Finding]:
             )
         )
 
-    rc, head = _run_tool([sys.executable, "-m", "survey_any", "check-schema"])
+    rc, head = _run_subcommand("check-schema", [])
     if rc is None:
         findings.append(
             Finding(
