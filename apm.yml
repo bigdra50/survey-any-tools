@@ -1,6 +1,6 @@
 name: survey-any
-version: 0.3.1
-description: Personal research workspace skills - ask / survey / survey-paper / survey-capture / inbox-organize / course. Distributed from survey-any-tools (public); skills drive the survey-any CLI over a content repo.
+version: 0.3.2
+description: Personal research workspace skills - ask / survey / survey-paper / survey-capture / inbox-organize / course / list-topics / organize / preview. Distributed from survey-any-tools (public); skills resolve the content repo via ghq and drive its mise tasks (survey-any CLI).
 author: bigdra50
 license: MIT
 targets:
